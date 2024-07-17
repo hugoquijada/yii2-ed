@@ -32,7 +32,7 @@ class JsonController extends Controller {
   public $pagina = null;
   public $ordenar = null;
 
-  public $serializer = 'common\rest\Serializer';
+  public $serializer = 'eDesarrollos\rest\Serializer';
 
   public function behaviors() {
     $behavior = parent::behaviors();

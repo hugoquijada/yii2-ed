@@ -20,7 +20,8 @@
         "phpoffice/phpspreadsheet": "^2.1",
         "yidas/yii2-bower-asset": "2.0.13.1",
         "firebase/php-jwt": "^5.4",
-        "mpdf/mpdf": "^8.2"
+        "mpdf/mpdf": "^8.2",
+        "ramsey/uuid": "^4.7"
     },
     "config": {
         "allow-plugins": {

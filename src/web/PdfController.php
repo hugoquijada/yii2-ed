@@ -3,8 +3,6 @@
 namespace eDesarrollos\web;
 
 use Mpdf\Mpdf;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Yii;
 
 class PdfController extends \yii\web\Controller {

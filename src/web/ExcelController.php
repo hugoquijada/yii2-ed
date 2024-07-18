@@ -2,16 +2,13 @@
 
 namespace eDesarrollos\web;
 
-use Mpdf\Mpdf;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use yii\filters\auth\CompositeAuth;
 use yii\filters\auth\QueryParamAuth;
-use yii\filters\Cors;
 
 class ExcelController extends \yii\web\Controller {
 

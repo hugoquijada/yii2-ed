@@ -21,6 +21,11 @@ use Yii;
  */
 class JsonController extends Controller {
 
+  const FORMATO_HTML = 'html';
+  const FORMATO_JSON = 'json';
+  const FORMATO_SQL = 'sql';
+  const FORMATO_XML = 'xml';
+
   public $app = null;
   public $req = null;
   public $res = null;
@@ -60,7 +65,6 @@ class JsonController extends Controller {
 
   public function beforeAction($action) {
     parent::beforeAction($action);
-    Yii::$app->getResponse()->format = Response::FORMAT_JSON;
     $this->app = Yii::$app;
     $this->req = $this->app->getRequest();
     $this->res = $this->app->getResponse();
@@ -78,7 +82,32 @@ class JsonController extends Controller {
           ->where(["{{{$tableName}}}.[[eliminado]]" => null]);
       }
     }
+    $formato = $this->req->get("formato", "");
+    if($formato === self::FORMATO_JSON) {
+      $this->res->format = Response::FORMAT_JSON;
+    } elseif($formato === self::FORMATO_XML) {
+      $this->res->format = Response::FORMAT_XML;
+    } elseif($formato === self::FORMATO_HTML) {
+      $this->res->format = Response::FORMAT_HTML;
+    } elseif($formato === self::FORMATO_SQL) {
+      $this->res->format = Response::FORMAT_RAW;
+    }
     return true;
+  }
+
+  public function actionOptions() {
+    $headers = $this->res->getHeaders();
+    $headers->set('Access-Control-Allow-Methods', 'POST, GET, DELETE, PUT, OPTIONS');
+    $headers->set('Access-Control-Allow-Headers', 'Content-Type,Accept,Authorization,X-Requested-With');
+    $headers->set('Access-Control-Allow-Origin', '*');
+    $headers->set('Access-Control-Request-Method', 'POST, GET, DELETE, PUT, OPTIONS');
+    $headers->set('Access-Control-Allow-Credentials', 'true');
+    $headers->set('Access-Control-Max-Age', 86400);
+    Yii::$app->end();
+  }
+
+  protected function actionIndex() {
+
   }
 
 }

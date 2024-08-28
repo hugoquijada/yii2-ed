@@ -7,6 +7,8 @@ use yii\data\ActiveDataProvider;
 
 class Respuesta {
 
+  const FORMATO_SQL = 'sql';
+
   public $cuerpo = [];
   protected $atributosPermitidos = [
     'resultado',
@@ -59,9 +61,8 @@ class Respuesta {
     } elseif ($modelo instanceof \yii\db\ActiveQuery || $modelo instanceof \yii\db\Query) {
       \Yii::$app->getResponse()->setStatusCode(200);
       $req = \Yii::$app->getRequest();
-      $sql = intval($req->get("sql", "")) === 1;
+      $sql = intval($req->get("formato", "")) === self::FORMATO_SQL;
       if ($sql) {
-        \Yii::$app->getResponse()->format = \yii\web\Response::FORMAT_RAW;
         echo $modelo->createCommand()->getRawSql();
         exit(0);
       }

@@ -34,7 +34,8 @@ class CronController extends Controller {
       $notif->save();
 
       $view = new \yii\web\View();
-      $contenido = $view->render("@app/modules/mail/views/layouts/cuerpo", [
+
+      $contenido = $view->render("@edesarrollos/mail/views/layouts/cuerpo", [
         "cuerpo" => $notif->cuerpo
       ]);
 
@@ -45,59 +46,64 @@ class CronController extends Controller {
         $notif->save();
         continue;
       }
-      foreach ($destinos as $indice => $valor) {
-        $destino = [$indice => $valor];
-        if (is_numeric($indice)) {
-          $destino = $valor;
-        }
-        try {
-
-          $emisor = $this->emisor;
-          if(empty($emisor)) {
-            $params = Yii::$app->params;
-            if(isset($params["correo.emisor"])) {
-              $emisor = $params["correo.emisor"];
-            }
-          }
-
-          if(empty($emisor)) {
-            throw new Exception("Debe configurar el correo emisor");
-          }
-
-          $correo = \Yii::$app->mailer->compose()
-            ->setFrom($emisor)
-            // ->setReplyTo($this->correoAResponder)
-            ->setTo($destino)
-            ->setSubject($notif->asunto)
-            ->setHtmlBody($contenido);
-
-          foreach ($notif->adjuntos as $adjunto) {
-            if (is_file($adjunto->ruta)) {
-              $correo->attach($adjunto->ruta);
-            }
-          }
-
-          $resultado = $correo->send();
-
-          if ($resultado) {
-            $notif->enviado = new Expression('now()');
-            $notif->estatus = NotificacionCorreo::ESTATUS_ENVIADO;
-          } else {
-            $notif->estatus = NotificacionCorreo::ESTATUS_ERROR;
-            $notif->detalle = $correo->toString(); # Buscar la manera de obtener el error
-          }
+      if(isset($destinos[0]) && is_array($destinos[0])) {
+        if(empty($destinos[0])) {
+          $notif->estatus = NotificacionCorreo::ESTATUS_ERROR;
+          $notif->detalle = "No hay destinos para el correo";
           $notif->save();
-
-          $this->stdout("\n");
-        } catch (\Exception $e) {
-
-          $notif->estatus = $notif::ESTATUS_ERROR;
-          $notif->detalle = $e->getMessage();
-          $notif->save();
-
-          $this->stdout(" Ocurrió un error al guardar {$e->getMessage()}\n");
+          continue;
         }
+        $destinos = $destinos[0];
       }
+
+      try {
+
+        $emisor = $this->emisor;
+        if(empty($emisor)) {
+          $params = Yii::$app->params;
+          if(isset($params["correo.emisor"])) {
+            $emisor = $params["correo.emisor"];
+          }
+        }
+
+        if(empty($emisor)) {
+          throw new Exception("Debe configurar el correo emisor");
+        }
+
+        $correo = \Yii::$app->mailer->compose()
+          ->setFrom($emisor)
+          // ->setReplyTo($this->correoAResponder)
+          ->setTo($destinos)
+          ->setSubject($notif->asunto)
+          ->setHtmlBody($contenido);
+
+        foreach ($notif->adjuntos as $adjunto) {
+          if (is_file($adjunto->ruta)) {
+            $correo->attach($adjunto->ruta);
+          }
+        }
+
+        $resultado = $correo->send();
+
+        if ($resultado) {
+          $notif->enviado = new Expression('now()');
+          $notif->estatus = NotificacionCorreo::ESTATUS_ENVIADO;
+        } else {
+          $notif->estatus = NotificacionCorreo::ESTATUS_ERROR;
+          $notif->detalle = $correo->toString(); # Buscar la manera de obtener el error
+        }
+        $notif->save();
+
+        $this->stdout("\n");
+      } catch (\Exception $e) {
+
+        $notif->estatus = $notif::ESTATUS_ERROR;
+        $notif->detalle = $e->getMessage();
+        $notif->save();
+
+        $this->stdout(" Ocurrió un error al guardar {$e->getMessage()}\n");
+      }
+
     }
   }
 }

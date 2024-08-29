@@ -1,6 +1,6 @@
 <?php
 
-namespace app\rest;
+namespace eDesarrollos\rest;
 
 use eDesarrollos\data\Respuesta;
 use yii\filters\ContentNegotiator;

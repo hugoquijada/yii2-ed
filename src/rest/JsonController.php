@@ -1,13 +1,14 @@
 <?php
 
-namespace eDesarrollos\rest;
+namespace app\rest;
 
+use eDesarrollos\data\Respuesta;
 use yii\filters\ContentNegotiator;
 use yii\filters\Cors;
-use yii\rest\Controller;
+use yii\db\Expression;
 use yii\web\Response;
+use yii\rest\Controller;
 use Yii;
-
 
 /**
  * @property \yii\web\Application $app
@@ -32,6 +33,7 @@ class JsonController extends Controller {
 
   public $queryInicial = null;
   public $modelClass = null;
+  public $modeloID = 'id';
 
   public $limite = null;
   public $pagina = null;
@@ -82,7 +84,7 @@ class JsonController extends Controller {
           ->where(["{{{$tableName}}}.[[eliminado]]" => null]);
       }
     }
-    $formato = $this->req->get("formato", "");
+    $formato = $this->req->get("formato", self::FORMATO_JSON);
     if($formato === self::FORMATO_JSON) {
       $this->res->format = Response::FORMAT_JSON;
     } elseif($formato === self::FORMATO_XML) {
@@ -103,11 +105,80 @@ class JsonController extends Controller {
     $headers->set('Access-Control-Request-Method', 'POST, GET, DELETE, PUT, OPTIONS');
     $headers->set('Access-Control-Allow-Credentials', 'true');
     $headers->set('Access-Control-Max-Age', 86400);
-    Yii::$app->end();
+    return "";
   }
 
-  protected function actionIndex() {
+  public function actionIndex() {
+    if($this->modelClass === null) {
+      return (new Respuesta())
+        ->esError()
+        ->mensaje("Debe especificar un modelo");
+    }
+    
+    $query = $this->queryInicial;
 
+    $this->buscador($query, $this->req);
+    
+    return new Respuesta($query, $this->limite, $this->pagina, $this->ordenar);
+  }
+
+  public function actionGuardar() {
+    $id = trim($this->req->getBodyParam("id", ""));
+    $modelo = null;
+
+    if($id !== "") {
+      $modelo = $this->modelClass::findOne($id);
+    }
+    if($modelo === null) {
+      $modelo = new $this->modelClass();
+      $modelo->uuid();
+      $modelo->creado = new Expression('now()');
+    } else {
+      $modelo->modificado = new Expression('now()');
+    }
+
+    $modelo->load($this->req->getBodyParams(), '');
+    if (!$modelo->save()) {
+      return (new Respuesta($modelo))
+        ->mensaje("Hubo un problema al guardar el registro");
+    }
+
+    $modelo->refresh();
+    return (new Respuesta($modelo))
+      ->mensaje("Registro guardado");
+  }
+
+  public function actionEliminar() {
+    $id = trim($this->req->getBodyParam("id", ""));
+    $modelo = null;
+
+    if($id !== "") {
+      $modelo = $this->modelClass::findOne([
+        "id" => $id,
+        "eliminado" => null
+      ]);
+    }
+    if($modelo === null) {
+      return (new Respuesta())
+        ->esError()
+        ->mensaje("Registro no encontrado");
+    }
+    $modelo->eliminado = new Expression('now()');
+    if(!$modelo->save()) {
+      return (new Respuesta($modelo))
+        ->mensaje("No se pudo eliminar el Registro");
+    }
+
+    return (new Respuesta())
+      ->mensaje("Registro eliminado");
+  }
+
+  public function buscador(&$query, $request) {
+    $id = $request->get($this->modeloID, "");
+
+    if($id !== "") {
+      $query->andWhere([$this->modeloID => $id]);
+    }
   }
 
 }

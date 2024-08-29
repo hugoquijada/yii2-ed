@@ -61,7 +61,7 @@ class Respuesta {
     } elseif ($modelo instanceof \yii\db\ActiveQuery || $modelo instanceof \yii\db\Query) {
       \Yii::$app->getResponse()->setStatusCode(200);
       $req = \Yii::$app->getRequest();
-      $sql = intval($req->get("formato", "")) === self::FORMATO_SQL;
+      $sql = trim($req->get("formato", "")) === self::FORMATO_SQL;
       if ($sql) {
         echo $modelo->createCommand()->getRawSql();
         exit(0);

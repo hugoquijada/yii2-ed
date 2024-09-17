@@ -28,9 +28,10 @@ class Usuario extends ActiveRecord implements IdentityInterface {
   public static function findIdentityByAccessToken($token, $type = null) {
     $key = Yii::$app->params['jwt.key'];
     $jwt = JWT::decode($token, $key, ['HS256']);
-    if(!isset($jwt->id)) {
+    if(!isset($jwt->id) || $jwt->exp < time()) { //Si no tiene id o el token expiró
       return null;
     }
+
 
     return static::findOne($jwt->id);
   }
@@ -49,7 +50,8 @@ class Usuario extends ActiveRecord implements IdentityInterface {
     $key = Yii::$app->params['jwt.key'];
     $token = [
       "id" => $this->id,
-      "pass" => $this->clave
+      "pass" => $this->clave,
+      "exp" => time() + 3600
     ];
 
     $jwt = JWT::encode($token, $key);

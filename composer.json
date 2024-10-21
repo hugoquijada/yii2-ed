@@ -16,6 +16,7 @@
     "require": {
         "php": ">=7.4",
         "yiisoft/yii2": "~2.0.46",
+        "yiisoft/yii2-gii": "~2.2.0",
         "yiisoft/yii2-composer": "^2.0",
         "phpoffice/phpspreadsheet": "^2.1",
         "yidas/yii2-bower-asset": "2.0.13.1",

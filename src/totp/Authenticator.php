@@ -13,38 +13,38 @@ namespace eDesarrollos\totp;
  */
 class Authenticator {
 
-  protected $_codeLength = 6;
+  protected $_longitudCodigo = 6;
 
   /**
-   * Create new secret.
-   * 16 characters, randomly chosen from the allowed base32 characters.
+   * Crear semilla.
+   * 16 caracteres, elegidos aleatoriamente de una cadena base 32.
    *
-   * @param int $secretLength
+   * @param int $longitudSemilla
    *
    * @return string
    */
-  public function createSecret($secretLength = 16) {
-    $validChars = $this->_getBase32LookupTable();
+  public function crearSemilla($longitudSemilla = 16) {
+    $caracteresValidos = $this->_getBase32LookupTable();
 
     // Valid secret lengths are 80 to 640 bits
-    if ($secretLength < 16 || $secretLength > 128) {
+    if ($longitudSemilla < 16 || $longitudSemilla > 128) {
       throw new \Exception('Bad secret length');
     }
     $secret = '';
     $rnd = false;
     if (function_exists('random_bytes')) {
-      $rnd = random_bytes($secretLength);
+      $rnd = random_bytes($longitudSemilla);
     } elseif (function_exists('mcrypt_create_iv')) {
-      $rnd = mcrypt_create_iv($secretLength, MCRYPT_DEV_URANDOM);
+      $rnd = mcrypt_create_iv($longitudSemilla, MCRYPT_DEV_URANDOM);
     } elseif (function_exists('openssl_random_pseudo_bytes')) {
-      $rnd = openssl_random_pseudo_bytes($secretLength, $cryptoStrong);
+      $rnd = openssl_random_pseudo_bytes($longitudSemilla, $cryptoStrong);
       if (!$cryptoStrong) {
         $rnd = false;
       }
     }
     if ($rnd !== false) {
-      for ($i = 0; $i < $secretLength; ++$i) {
-        $secret .= $validChars[ord($rnd[$i]) & 31];
+      for ($i = 0; $i < $longitudSemilla; ++$i) {
+        $secret .= $caracteresValidos[ord($rnd[$i]) & 31];
       }
     } else {
       throw new \Exception('No source of secure random');
@@ -54,24 +54,24 @@ class Authenticator {
   }
 
   /**
-   * Calculate the code, with given secret and point in time.
+   * Calcula el código, usando la semilla y una fracción de tiempo.
    *
-   * @param string   $secret
-   * @param int|null $timeSlice
+   * @param string   $semilla
+   * @param int|null $fraccion
    *
    * @return string
    */
-  public function getCode($secret, $timeSlice = null) {
-    if ($timeSlice === null) {
-      $timeSlice = floor(time() / 30);
+  public function obtenerCodigo($semilla, $fraccion = null) {
+    if ($fraccion === null) {
+      $fraccion = floor(time() / 30);
     }
 
-    $secretkey = $this->_base32Decode($secret);
+    $llave = $this->_base32Decode($semilla);
 
     // Pack time into binary string
-    $time = chr(0) . chr(0) . chr(0) . chr(0) . pack('N*', $timeSlice);
+    $tiempo = chr(0) . chr(0) . chr(0) . chr(0) . pack('N*', $fraccion);
     // Hash it with users secret key
-    $hm = hash_hmac('SHA1', $time, $secretkey, true);
+    $hm = hash_hmac('SHA1', $tiempo, $llave, true);
     // Use last nipple of result as index/offset
     $offset = ord(substr($hm, -1)) & 0x0F;
     // grab 4 bytes of the result
@@ -83,56 +83,56 @@ class Authenticator {
     // Only 32 bits
     $value = $value & 0x7FFFFFFF;
 
-    $modulo = pow(10, $this->_codeLength);
+    $modulo = pow(10, $this->_longitudCodigo);
 
-    return str_pad($value % $modulo, $this->_codeLength, '0', STR_PAD_LEFT);
+    return str_pad($value % $modulo, $this->_longitudCodigo, '0', STR_PAD_LEFT);
   }
 
   /**
-   * Get QR-Code URL for image, from google charts.
+   * Obtener una url de una imagen QR
    *
-   * @param string $name
-   * @param string $secret
-   * @param string $title
+   * @param string $nombre
+   * @param string $semilla
+   * @param string $titulo
    * @param array  $params
    *
    * @return string
    */
-  public function getQRCodeGoogleUrl($name, $secret, $title = null, $params = array()) {
-    $width = !empty($params['width']) && (int) $params['width'] > 0 ? (int) $params['width'] : 200;
-    $height = !empty($params['height']) && (int) $params['height'] > 0 ? (int) $params['height'] : 200;
-    $level = !empty($params['level']) && array_search($params['level'], array('L', 'M', 'Q', 'H')) !== false ? $params['level'] : 'M';
+  public function getQRUrl($nombre, $semilla, $titulo = null, $params = []) {
+    $width  = isset($params['width']) && (int) $params['width'] > 0 ? (int) $params['width'] : 200;
+    $height = isset($params['height']) && (int) $params['height'] > 0 ? (int) $params['height'] : 200;
+    $level  = isset($params['level']) && array_search($params['level'],['L', 'M', 'Q', 'H']) !== false ? $params['level'] : 'M';
 
-    $urlencoded = urlencode('otpauth://totp/' . $name . '?secret=' . $secret . '');
-    if (isset($title)) {
-      $urlencoded .= urlencode('&issuer=' . urlencode($title));
+    $urlencoded = urlencode('otpauth://totp/' . $nombre . '?secret=' . $semilla . '');
+    if (isset($titulo)) {
+      $urlencoded .= urlencode('&issuer=' . urlencode($titulo));
     }
 
     return "https://api.qrserver.com/v1/create-qr-code/?data={$urlencoded}&size={$width}x{$height}&ecc={$level}";
   }
 
   /**
-   * Check if the code is correct. This will accept codes starting from $discrepancy*30sec ago to $discrepancy*30sec from now.
+   * Comprobar si el código es correcto. Aceptará códigos desde $discrepancia * 30 segundos, antes y después de ahora
    *
-   * @param string   $secret
-   * @param string   $code
-   * @param int      $discrepancy      This is the allowed time drift in 30 second units (8 means 4 minutes before or after)
-   * @param int|null $currentTimeSlice time slice if we want use other that time()
+   * @param string   $semilla
+   * @param string   $codigo
+   * @param int      $discrepancia permite un rango de tiempo (8 significa 4 minutos antes o después)
+   * @param int|null $fraccion fracción de tiempo si no queremos usar time()
    *
    * @return bool
    */
-  public function verifyCode($secret, $code, $discrepancy = 1, $currentTimeSlice = null) {
-    if ($currentTimeSlice === null) {
-      $currentTimeSlice = floor(time() / 30);
+  public function verifyCode($semilla, $codigo, $discrepancia = 1, $fraccion = null) {
+    if ($fraccion === null) {
+      $fraccion = floor(time() / 30);
     }
 
-    if (strlen($code) != 6) {
+    if (strlen($codigo) != 6) {
       return false;
     }
 
-    for ($i = -$discrepancy; $i <= $discrepancy; ++$i) {
-      $calculatedCode = $this->getCode($secret, $currentTimeSlice + $i);
-      if ($this->timingSafeEquals($calculatedCode, $code)) {
+    for ($i = -$discrepancia; $i <= $discrepancia; ++$i) {
+      $codigoCalculado = $this->obtenerCodigo($semilla, $fraccion + $i);
+      if ($this->timingSafeEquals($codigoCalculado, $codigo)) {
         return true;
       }
     }
@@ -141,14 +141,14 @@ class Authenticator {
   }
 
   /**
-   * Set the code length, should be >=6.
+   * Asigna la longitud del código, debe ser mayor que 6 caracteres
    *
-   * @param int $length
+   * @param int $longitud
    *
    * @return Authenticator
    */
-  public function setCodeLength($length) {
-    $this->_codeLength = $length;
+  public function longitudCodigo($longitud) {
+    $this->_longitudCodigo = $longitud;
 
     return $this;
   }

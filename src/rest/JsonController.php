@@ -35,6 +35,9 @@ class JsonController extends Controller {
   public $modelClass = null;
   public $modeloID = 'id';
 
+  public $nombreSingular = 'Registro';
+  public $nombrePlural = 'Registros';
+
   public $limite = null;
   public $pagina = null;
   public $ordenar = null;
@@ -140,12 +143,12 @@ class JsonController extends Controller {
     $modelo->load($this->req->getBodyParams(), '');
     if (!$modelo->save()) {
       return (new Respuesta($modelo))
-        ->mensaje("Hubo un problema al guardar el registro");
+        ->mensaje("Hubo un problema al guardar el {$this->nombreSingular}");
     }
 
     $modelo->refresh();
     return (new Respuesta($modelo))
-      ->mensaje("Registro guardado");
+      ->mensaje("{$this->nombreSingular} guardado");
   }
 
   public function actionEliminar() {
@@ -161,16 +164,16 @@ class JsonController extends Controller {
     if($modelo === null) {
       return (new Respuesta())
         ->esError()
-        ->mensaje("Registro no encontrado");
+        ->mensaje("{$this->nombreSingular} no encontrado");
     }
     $modelo->eliminado = new Expression('now()');
     if(!$modelo->save()) {
       return (new Respuesta($modelo))
-        ->mensaje("No se pudo eliminar el Registro");
+        ->mensaje("No se pudo eliminar el {$this->nombreSingular}");
     }
 
     return (new Respuesta())
-      ->mensaje("Registro eliminado");
+      ->mensaje("{$this->nombreSingular} eliminado");
   }
 
   public function buscador(&$query, $request) {

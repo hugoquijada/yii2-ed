@@ -75,7 +75,7 @@ class <?= $className ?> extends ModeloBase {
 
   public function fields () {
     return [
-<?php foreach ($properties as $property => $data): ?><?php if($properties === "eliminado"): continue; endif ?>      '<?= $property ?>,'<?= "\n" ?><?php endforeach; ?>
+<?php foreach ($properties as $property => $data): ?><?php if($properties === "eliminado"): continue; endif ?>      '<?= $property ?>',<?= "\n" ?><?php endforeach; ?>
     ];
   }
 

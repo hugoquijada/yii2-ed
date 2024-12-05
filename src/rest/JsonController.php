@@ -81,6 +81,8 @@ class JsonController extends Controller {
     if ($this->modelClass !== null) {
       $model = new $this->modelClass;
       $tableName = $this->modelClass::tableName();
+      $this->nombreSingular = $this->modelClass::nombreSingular() ?? 'Registro';
+      $this->nombrePlural = $this->modelClass::nombrePlural() ?? 'Registros';
       $this->queryInicial = $this->modelClass::find();
       if ($model->hasProperty('eliminado')) {
         $this->queryInicial

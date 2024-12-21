@@ -183,10 +183,9 @@ class ExcelController extends \yii\web\Controller {
     ],
   ];
 
-  public function __construct($spreadsheet = null) {
-    if($spreadsheet !== null) {
-      $this->spreadsheet = $spreadsheet;
-    } else {
+  public function __construct($id, $module, $config = []) {
+    parent::__construct($id, $module, $config);
+    if($this->spreadsheet === null) {
       $this->spreadsheet = new Spreadsheet();
     }
     $this->activeSheet = $this->spreadsheet->getActiveSheet();

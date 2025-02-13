@@ -73,6 +73,18 @@ class JsonController extends Controller {
     $this->app = Yii::$app;
     $this->req = $this->app->getRequest();
     $this->res = $this->app->getResponse();
+    $headers = $this->res->getHeaders();
+
+    $headers->set('Access-Control-Allow-Methods', 'POST, GET, DELETE, PUT, OPTIONS');
+    $headers->set('Access-Control-Allow-Headers', 'Content-Type,Accept,Authorization');
+    $headers->set('Access-Control-Allow-Origin', '*');
+    $headers->set('Access-Control-Request-Method', 'POST, GET, DELETE, PUT, OPTIONS');
+    $headers->set('Access-Control-Allow-Credentials', 'true');
+    $headers->set('Access-Control-Max-Age', 86400);
+    if ($this->req->isOptions) {
+      Yii::$app->end();
+    }
+
     if ($this->req->isGet) {
       $this->limite = $this->req->get("limite", 20);
       $this->pagina = $this->req->get("pagina", 0);

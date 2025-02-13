@@ -32,7 +32,6 @@ class Usuario extends ActiveRecord implements IdentityInterface {
       return null;
     }
 
-
     return static::findOne($jwt->id);
   }
 

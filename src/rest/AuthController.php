@@ -27,6 +27,10 @@ class AuthController extends JsonController {
 
     $this->usuario = \Yii::$app->getUser()->getIdentity();
 
+    if ($this->usuario === null) {
+      throw new \yii\web\UnauthorizedHttpException('No está autorizado para realizar esta acción.');
+    }
+
     if (!empty($this->permisos)) {
       $this->usuario->cargarPermisos($this->permisos);
     }

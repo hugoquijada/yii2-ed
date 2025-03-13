@@ -53,17 +53,6 @@ class JsonController extends Controller {
         'application/xml' => Response::FORMAT_XML,
       ],
     ];
-    $behavior['corsFilter'] = [
-      'class' => Cors::class,
-      'cors' => [
-        'Origin' => ['*'],
-        'Access-Control-Request-Method' => [
-          'GET', 'POST', 'PUT', 'PATCH', 
-          'DELETE', 'HEAD', 'OPTIONS'
-        ],
-        'Access-Control-Request-Headers' => ['*'],
-      ],
-    ];
     $behavior["authenticator"]["except"] = ['options'];
     return $behavior;
   }
@@ -73,6 +62,23 @@ class JsonController extends Controller {
     $this->app = Yii::$app;
     $this->req = $this->app->getRequest();
     $this->res = $this->app->getResponse();
+    $headers = $this->res->getHeaders();
+
+    $origin = \Yii::$app->getRequest()->headers->get('Origin');
+    $headers->set('Access-Control-Allow-Methods', 'POST, GET, DELETE, PUT, OPTIONS');
+    $headers->set('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-Requested-With, Content-Disposition, Content-Length');
+    $headers->set('Access-Control-Request-Method', 'POST, GET, DELETE, PUT, OPTIONS');
+    $headers->set('Access-Control-Allow-Credentials', 'true');
+    if($origin) {
+      $headers->set('Access-Control-Allow-Origin', $origin);
+    } else {
+      $headers->set('Access-Control-Allow-Origin', '*');
+    }
+    $headers->set('Access-Control-Max-Age', 86400);
+    if ($this->req->isOptions) {
+      Yii::$app->end();
+    }
+
     if ($this->req->isGet) {
       $this->limite = $this->req->get("limite", 20);
       $this->pagina = $this->req->get("pagina", 0);
@@ -104,12 +110,9 @@ class JsonController extends Controller {
 
   public function actionOptions() {
     $headers = $this->res->getHeaders();
-    $headers->set('Access-Control-Allow-Methods', 'POST, GET, DELETE, PUT, OPTIONS');
-    $headers->set('Access-Control-Allow-Headers', 'Content-Type,Accept,Authorization,X-Requested-With');
-    $headers->set('Access-Control-Allow-Origin', '*');
-    $headers->set('Access-Control-Request-Method', 'POST, GET, DELETE, PUT, OPTIONS');
-    $headers->set('Access-Control-Allow-Credentials', 'true');
-    $headers->set('Access-Control-Max-Age', 86400);
+    
+    // TODO: Agregar encabezados personalizados
+    
     return "";
   }
 

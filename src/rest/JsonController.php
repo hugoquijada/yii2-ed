@@ -64,7 +64,7 @@ class JsonController extends Controller {
     $this->res = $this->app->getResponse();
     $headers = $this->res->getHeaders();
 
-    $origin = \Yii::$app->getRequest()->headers->get('Origin');
+    $origin = $this->req->headers->get('Origin');
     $headers->set('Access-Control-Allow-Methods', 'POST, GET, DELETE, PUT, OPTIONS');
     $headers->set('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-Requested-With, Content-Disposition, Content-Length');
     $headers->set('Access-Control-Request-Method', 'POST, GET, DELETE, PUT, OPTIONS');

@@ -1,6 +1,6 @@
 {
     "name": "edesarrollos/yii2-ed",
-    "description": "Conjunto de módulos de eDesarrollos",
+    "description": "Conjunto de mÃ³dulos de eDesarrollos",
     "type": "library",
     "autoload": {
         "psr-4": {

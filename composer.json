@@ -23,7 +23,8 @@
         "yidas/yii2-bower-asset": "2.0.13.1",
         "firebase/php-jwt": "^5.4",
         "mpdf/mpdf": "^8.2",
-        "ramsey/uuid": "^4.7"
+        "ramsey/uuid": "^4.7",
+        "box/spout": "^3.3"
     },
     "config": {
         "allow-plugins": {

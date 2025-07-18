@@ -270,10 +270,7 @@ class ExcelController extends \yii\web\Controller {
 
   public function agregarRenglones($renglones) {
     foreach($renglones as $coordenada => $valor)  {
-      $this->agregarCelda($coordenada, [
-        "valor" => $valor,
-        "estilo" => self::$estiloCeldaNormal
-      ]);
+      $this->agregarCelda($coordenada, $valor);
     }
     return $this;
   }
@@ -294,19 +291,40 @@ class ExcelController extends \yii\web\Controller {
   }
 
   public function agregarCelda($coordenada, $valor) {
-    if(isset($valor["valor"])) {
+    if (isset($valor["valor"])) {
       $this->activeSheet
         ->setCellValue($coordenada, $valor["valor"]);
+      if (isset($valor["combinar"])) {
+        $coordenada = "{$coordenada}:{$valor["combinar"]}";
+        $this->activeSheet
+          ->mergeCells($coordenada);
+      }
     }
-    if(isset($valor["combinar"])) {
-      $coordenada = "{$coordenada}:{$valor["combinar"]}";
-      $this->activeSheet
-        ->mergeCells($coordenada);
-    }
-    if(isset($valor["estilo"])) {
+    if (isset($valor["estilo"])) {
       $this->activeSheet
         ->getStyle($coordenada)
         ->applyFromArray($valor["estilo"]);
+    }
+    if (isset($valor["estiloCondicional"])) {
+      $condiciones = $this->activeSheet->getStyle($coordenada)
+        ->getConditionalStyles();
+      foreach($valor["estiloCondicional"] as $c) {
+        $condiciones[] = $c;
+      }
+      $this->activeSheet->getStyle($coordenada)
+        ->setConditionalStyles($condiciones);
+    }
+    if(isset($valor["formato"])) {
+      $this->activeSheet
+        ->getStyle($coordenada)
+        ->getNumberFormat()
+        ->setFormatCode($valor["formato"]);
+    }
+    if(isset($valor["enlace"])) {
+      $this->activeSheet
+        ->getCell($coordenada)
+        ->getHyperlink()
+        ->setUrl($valor["enlace"]);
     }
   }
 

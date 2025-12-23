@@ -1,6 +1,6 @@
 {
     "name": "edesarrollos/yii2-ed",
-    "description": "Conjunto de mÃ³dulos de eDesarrollos",
+    "description": "Conjunto de módulos de eDesarrollos",
     "type": "library",
     "autoload": {
         "psr-4": {
@@ -15,7 +15,7 @@
     ],
     "require": {
         "php": ">=7.4",
-        "yiisoft/yii2": "2.0.46",
+        "yiisoft/yii2": "^2.0.46",
         "yiisoft/yii2-gii": "~2.2.0",
         "yiisoft/yii2-composer": "^2.0",
         "yiisoft/yii2-symfonymailer": "2.0.3",

@@ -8,8 +8,7 @@ use yii\web\IdentityInterface;
 use Firebase\JWT\JWT;
 use Ramsey\Uuid\Uuid;
 
-class Usuario extends ModeloBase implements IdentityInterface
-{
+class Usuario extends ModeloBase implements IdentityInterface {
 
   /**
    * Finds an identity by the given id.
@@ -17,8 +16,7 @@ class Usuario extends ModeloBase implements IdentityInterface
    * @param string|int $id the id to be looked for
    * @return IdentityInterface|null the identity object that matches the given id.
    */
-  public static function findIdentity($id)
-  {
+  public static function findIdentity($id) {
     return static::findOne($id);
   }
 
@@ -28,8 +26,7 @@ class Usuario extends ModeloBase implements IdentityInterface
    * @param string $token the token to be looked for
    * @return IdentityInterface|null the identity object that matches the given token.
    */
-  public static function findIdentityByAccessToken($token, $type = null)
-  {
+  public static function findIdentityByAccessToken($token, $type = null) {
     $key = Yii::$app->params['jwt.key'];
     $jwt = JWT::decode($token, $key, ['HS256']);
     if (!isset($jwt->id) || $jwt->exp < time()) { //Si no tiene id o el token expiró
@@ -42,16 +39,14 @@ class Usuario extends ModeloBase implements IdentityInterface
   /**
    * @return int|string current user ID
    */
-  public function getId()
-  {
+  public function getId() {
     return $this->id;
   }
 
   /**
    * @return string current user auth key
    */
-  public function getAuthKey()
-  {
+  public function getAuthKey() {
     $key = Yii::$app->params['jwt.key'];
     $token = [
       "id" => $this->id,
@@ -67,8 +62,10 @@ class Usuario extends ModeloBase implements IdentityInterface
    * @param string $authKey
    * @return bool if auth key is valid for current user
    */
-  public function validateAuthKey($authKey)
-  {
+  public function validateAuthKey($authKey) {
+    if(empty($authKey)) {
+      return false;
+    }
     $key = Yii::$app->params['jwt.key'];
     $jwt = JWT::decode($authKey, $key);
     if (!isset($jwt["id"])) {

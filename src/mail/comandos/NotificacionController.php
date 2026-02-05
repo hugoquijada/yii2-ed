@@ -1,6 +1,6 @@
 <?php
 
-namespace eDesarrollos\mail\commands;
+namespace eDesarrollos\mail\comandos;
 
 use eDesarrollos\mail\models\NotificacionCorreo;
 use yii\console\Controller;

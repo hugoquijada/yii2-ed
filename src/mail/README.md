@@ -1,7 +1,7 @@
 #### Ejecutar la migración
 
 ```
-php yii migrate --migrationPath=@app/modules/mail/migrations
+php yii migrate --migrationPath=@eDesarrollos/mail/migraciones
 ```
 
 ### Revisar que la configuración para envío de correo este correcto
@@ -30,11 +30,11 @@ $config = [
 
 #### Correr el comando de migración
 
-Agregar al archivo config/console.php las siguientes líneas
+Agregar al archivo config/consola.php las siguientes líneas
 
 ```
 $config['bootstrap'][] = 'mail';
-$config['modules']['mail'] = ['class' => 'app\modules\mail\Controller'];
+$config['modules']['mail'] = ['class' => 'eDesarrollos\mail\Modulo'];
 ```
 
 #### Ejecutar el comando para enviar el correo

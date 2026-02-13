@@ -2,6 +2,7 @@
     "name": "edesarrollos/yii2-ed",
     "description": "Conjunto de módulos de eDesarrollos",
     "type": "library",
+    "license": "MIT",
     "autoload": {
         "psr-4": {
             "eDesarrollos\\": "src/"
@@ -21,10 +22,10 @@
         "yiisoft/yii2-symfonymailer": "2.0.3",
         "phpoffice/phpspreadsheet": "^2.1",
         "yidas/yii2-bower-asset": "2.0.13.1",
-        "firebase/php-jwt": "^5.4",
+        "firebase/php-jwt": "^6.0",
         "mpdf/mpdf": "^8.2",
         "ramsey/uuid": "^4.7",
-        "box/spout": "^3.3"
+        "openspout/openspout": "^5.4"
     },
     "config": {
         "allow-plugins": {

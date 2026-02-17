@@ -12,5 +12,5 @@ Instalación
 ------------
 
 ```
-php composer.phar require 
+php composer.phar require edesarrollos/yii2-ed
 ```

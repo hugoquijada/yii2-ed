@@ -25,7 +25,7 @@
         "firebase/php-jwt": "^6.0",
         "mpdf/mpdf": "^8.2",
         "ramsey/uuid": "^4.7",
-        "openspout/openspout": "^5.4"
+        "openspout/openspout": "^4.28"
     },
     "config": {
         "allow-plugins": {

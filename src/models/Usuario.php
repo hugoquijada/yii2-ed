@@ -3,10 +3,9 @@
 namespace eDesarrollos\models;
 
 use Yii;
-use yii\db\ActiveRecord;
 use yii\web\IdentityInterface;
 use Firebase\JWT\JWT;
-use Ramsey\Uuid\Uuid;
+use Firebase\JWT\Key;
 
 class Usuario extends ModeloBase implements IdentityInterface {
 
@@ -28,7 +27,7 @@ class Usuario extends ModeloBase implements IdentityInterface {
    */
   public static function findIdentityByAccessToken($token, $type = null) {
     $key = Yii::$app->params['jwt.key'];
-    $jwt = JWT::decode($token, $key, ['HS256']);
+    $jwt = JWT::decode($token, new Key($key, 'HS256'));
     if (!isset($jwt->id) || $jwt->exp < time()) { //Si no tiene id o el token expiró
       return null;
     }
@@ -54,7 +53,7 @@ class Usuario extends ModeloBase implements IdentityInterface {
       "exp" => time() + 3600
     ];
 
-    $jwt = JWT::encode($token, $key);
+    $jwt = JWT::encode($token, $key, 'HS256');
     return $jwt;
   }
 
@@ -63,15 +62,15 @@ class Usuario extends ModeloBase implements IdentityInterface {
    * @return bool if auth key is valid for current user
    */
   public function validateAuthKey($authKey) {
-    if(empty($authKey)) {
+    if (empty($authKey)) {
       return false;
     }
     $key = Yii::$app->params['jwt.key'];
-    $jwt = JWT::decode($authKey, $key);
-    if (!isset($jwt["id"])) {
+    $jwt = JWT::decode($authKey, new Key($key, 'HS256'));
+    if (!isset($jwt->id)) {
       return false;
     }
 
-    return $jwt["id"] == $this->id;
+    return $jwt->id == $this->id;
   }
 }

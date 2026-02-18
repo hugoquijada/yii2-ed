@@ -20,12 +20,10 @@
         "yiisoft/yii2-gii": "~2.2.0",
         "yiisoft/yii2-composer": "^2.0",
         "yiisoft/yii2-symfonymailer": "2.0.3",
-        "phpoffice/phpspreadsheet": "^2.1",
         "yidas/yii2-bower-asset": "2.0.13.1",
-        "firebase/php-jwt": "^6.0",
-        "mpdf/mpdf": "^8.2",
+        "firebase/php-jwt": "^7.0",
         "ramsey/uuid": "^4.7",
-        "openspout/openspout": "^4.28"
+        "hqsoft/reportkit": "^1.0"
     },
     "config": {
         "allow-plugins": {

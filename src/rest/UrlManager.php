@@ -13,6 +13,12 @@ class UrlManager extends \yii\web\UrlManager {
   // public $ruleConfig = ['class' => 'eDesarrollos\rest\UrlRule'];
 
   public $rules = [
+    'GET pdf/<controller:[\w-]+>/<action:[\w-]+>.<format:(?!pdf$)[\w]+>' => 'v1/default/error',
+    'GET pdf/<controller:[\w-]+>.<format:(?!pdf$)[\w]+>' => 'v1/default/error',
+    'GET excel/<controller:[\w-]+>/<action:[\w-]+>.<format:(?!xlsx$)[\w]+>' => 'v1/default/error',
+    'GET excel/<controller:[\w-]+>.<format:(?!xlsx$)[\w]+>' => 'v1/default/error',
+    'GET word/<controller:[\w-]+>/<action:[\w-]+>.<format:(?!word$)[\w]+>' => 'v1/default/error',
+    'GET word/<controller:[\w-]+>.<format:(?!word$)[\w]+>' => 'v1/default/error',
     'OPTIONS <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>/options',
     'OPTIONS <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>/options',
     'GET <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>/<action>',

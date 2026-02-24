@@ -26,6 +26,9 @@ class JsonController extends Controller {
   const FORMATO_JSON = 'json';
   const FORMATO_SQL = 'sql';
   const FORMATO_XML = 'xml';
+  const FORMATO_CSV = 'csv';
+  const FORMATO_XLSX = 'xlsx';
+  const FORMATO_PDF = 'pdf';
 
   public $app = null;
   public $req = null;
@@ -69,7 +72,7 @@ class JsonController extends Controller {
     $headers->set('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-Requested-With, Content-Disposition, Content-Length');
     $headers->set('Access-Control-Request-Method', 'POST, GET, DELETE, PUT, OPTIONS');
     $headers->set('Access-Control-Allow-Credentials', 'true');
-    if($origin) {
+    if ($origin) {
       $headers->set('Access-Control-Allow-Origin', $origin);
     } else {
       $headers->set('Access-Control-Allow-Origin', '*');
@@ -96,37 +99,46 @@ class JsonController extends Controller {
       }
     }
     $formato = $this->req->get("formato", self::FORMATO_JSON);
-    if($formato === self::FORMATO_JSON) {
+    if ($formato === self::FORMATO_JSON) {
       $this->res->format = Response::FORMAT_JSON;
-    } elseif($formato === self::FORMATO_XML) {
+    } elseif ($formato === self::FORMATO_XML) {
       $this->res->format = Response::FORMAT_XML;
-    } elseif($formato === self::FORMATO_HTML) {
+    } elseif ($formato === self::FORMATO_HTML) {
       $this->res->format = Response::FORMAT_HTML;
-    } elseif($formato === self::FORMATO_SQL) {
+    } elseif ($formato === self::FORMATO_SQL) {
       $this->res->format = Response::FORMAT_RAW;
+    } elseif ($formato === self::FORMATO_CSV) {
+      $this->res->format = self::FORMATO_CSV;
+      $this->res->formatters[self::FORMATO_CSV] = 'eDesarrollos\formatters\CsvFormatter';
+    } elseif ($formato === self::FORMATO_XLSX) {
+      $this->res->format = self::FORMATO_XLSX;
+      $this->res->formatters[self::FORMATO_XLSX] = 'eDesarrollos\formatters\SpreadsheetFormatter';
+    } elseif ($formato === self::FORMATO_PDF) {
+      $this->res->format = self::FORMATO_PDF;
+      $this->res->formatters[self::FORMATO_PDF] = 'eDesarrollos\formatters\PdfFormatter';
     }
     return true;
   }
 
   public function actionOptions() {
     $headers = $this->res->getHeaders();
-    
+
     // TODO: Agregar encabezados personalizados
-    
+
     return "";
   }
 
   public function actionIndex() {
-    if($this->modelClass === null) {
+    if ($this->modelClass === null) {
       return (new Respuesta())
         ->esError()
         ->mensaje("Debe especificar un modelo");
     }
-    
+
     $query = $this->queryInicial;
 
     $this->buscador($query, $this->req);
-    
+
     return new Respuesta($query, $this->limite, $this->pagina, $this->ordenar);
   }
 
@@ -134,10 +146,10 @@ class JsonController extends Controller {
     $id = trim($this->req->getBodyParam("id", ""));
     $modelo = null;
 
-    if($id !== "") {
+    if ($id !== "") {
       $modelo = $this->modelClass::findOne($id);
     }
-    if($modelo === null) {
+    if ($modelo === null) {
       $modelo = new $this->modelClass();
       $modelo->uuid();
       $modelo->creado = new Expression('now()');
@@ -160,19 +172,19 @@ class JsonController extends Controller {
     $id = trim($this->req->getBodyParam("id", ""));
     $modelo = null;
 
-    if($id !== "") {
+    if ($id !== "") {
       $modelo = $this->modelClass::findOne([
         "id" => $id,
         "eliminado" => null
       ]);
     }
-    if($modelo === null) {
+    if ($modelo === null) {
       return (new Respuesta())
         ->esError()
         ->mensaje("{$this->nombreSingular} no encontrado");
     }
     $modelo->eliminado = new Expression('now()');
-    if(!$modelo->save()) {
+    if (!$modelo->save()) {
       return (new Respuesta($modelo))
         ->mensaje("No se pudo eliminar el {$this->nombreSingular}");
     }
@@ -184,9 +196,8 @@ class JsonController extends Controller {
   public function buscador(&$query, $request) {
     $id = $request->get($this->modeloID, "");
 
-    if($id !== "") {
+    if ($id !== "") {
       $query->andWhere([$this->modeloID => $id]);
     }
   }
-
 }

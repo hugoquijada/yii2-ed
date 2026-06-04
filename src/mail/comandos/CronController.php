@@ -35,8 +35,13 @@ class CronController extends Controller {
 
       $view = new \yii\web\View();
 
-      $contenido = $view->render("@edesarrollos/mail/views/layouts/cuerpo", [
-        "cuerpo" => $notif->cuerpo
+      $layoutPath = Yii::getAlias('@app/mail/layouts/html.php', false);
+      if ($layoutPath === false || !is_file($layoutPath)) {
+        $layoutPath = Yii::getAlias('@edesarrollos/mail/vistas/layouts/html.php');
+      }
+
+      $contenido = $view->renderFile($layoutPath, [
+        "content" => $notif->cuerpo
       ]);
 
       $destinos = $notif->receptor;

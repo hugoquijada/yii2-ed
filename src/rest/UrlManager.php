@@ -22,7 +22,7 @@ class UrlManager extends \yii\web\UrlManager {
     'OPTIONS <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>/options',
     'OPTIONS <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>/options',
     'GET <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>/<action>',
-    'GET <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>.<formato:(json|xm|csvl|html|sql)>' => '<module>/<controller>',
+    'GET <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>',
     'POST <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>/<action>',
     'POST <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>/guardar',
     'PUT <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(json|xml|csv|html|sql)>' => '<module>/<controller>/<action>',

@@ -12,15 +12,15 @@ $config = [
   'components' => [
     // ...
     'mailer' => [
-      'class' => 'yii\swiftmailer\Mailer',
+      'class' => \yii\symfonymailer\Mailer::class,
+      'viewPath' => '@app/mail',
       'useFileTransport' => false,
       'transport' => [
-        'class' => 'Swift_SmtpTransport',
+        'scheme' => 'smtp',
         'host' => 'smtp.gmail.com',
         'username' => 'correo@gmail.com',
         'password' => 'contraseña',
-        'port' => '587',
-        'encryption' => 'tls',
+        'port' => 587,
       ],
     ],
   ]
@@ -34,13 +34,15 @@ Agregar al archivo config/consola.php las siguientes líneas
 
 ```
 $config['bootstrap'][] = 'mail';
-$config['modules']['mail'] = ['class' => 'eDesarrollos\mail\Modulo'];
+$config['modules']['mail'] = ['class' => 'eDesarrollos\mail\Module'];
 ```
 
 #### Ejecutar el comando para enviar el correo
 ```
 php yii mail/cron
 ```
+
+Si deseas personalizar la plantilla HTML de los correos, crea o modifica `@app/mail/layouts/html.php`.
 
 #### Guardar notificaciones
 

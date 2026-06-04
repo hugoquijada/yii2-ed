@@ -27,7 +27,11 @@ class Usuario extends ModeloBase implements IdentityInterface {
    */
   public static function findIdentityByAccessToken($token, $type = null) {
     $key = Yii::$app->params['jwt.key'];
-    $jwt = JWT::decode($token, new Key($key, 'HS256'));
+    try {
+      $jwt = JWT::decode($token, new Key($key, 'HS256'));
+    } catch (\Throwable $th) {
+      return null;
+    }
     if (!isset($jwt->id) || $jwt->exp < time()) { //Si no tiene id o el token expiró
       return null;
     }
@@ -66,7 +70,11 @@ class Usuario extends ModeloBase implements IdentityInterface {
       return false;
     }
     $key = Yii::$app->params['jwt.key'];
-    $jwt = JWT::decode($authKey, new Key($key, 'HS256'));
+    try {
+      $jwt = JWT::decode($authKey, new Key($key, 'HS256'));
+    } catch (\Throwable $th) {
+      return false;
+    }
     if (!isset($jwt->id)) {
       return false;
     }

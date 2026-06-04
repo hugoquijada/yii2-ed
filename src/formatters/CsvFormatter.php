@@ -5,6 +5,10 @@ namespace eDesarrollos\formatters;
 use hqsoft\reportkit\renderers\csv\CsvRenderer;
 
 class CsvFormatter extends ReportFormatter {
+  protected function getDocumentType(): string {
+    return \hqsoft\reportkit\document\Document::TYPE_CSV;
+  }
+
   public function format($response) {
     $response->getHeaders()->set('Content-Type', 'text/csv; charset=UTF-8');
 

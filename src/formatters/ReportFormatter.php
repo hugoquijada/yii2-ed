@@ -19,6 +19,13 @@ abstract class ReportFormatter implements ResponseFormatterInterface {
       return $data;
     }
 
+    if ($data instanceof Respuesta) {
+      $documento = $data->crearDocumentoReporte($this->getDocumentType());
+      if ($documento instanceof Document && (!empty($documento->getRows()) || !empty($documento->getHeaderRows()) || !empty($documento->getFooterRows()))) {
+        return $documento;
+      }
+    }
+
     $rows = [];
     if ($data instanceof Respuesta) {
       $rows = $data->cuerpo['resultado'] ?? [];
@@ -75,4 +82,6 @@ abstract class ReportFormatter implements ResponseFormatterInterface {
 
     return $doc;
   }
+
+  abstract protected function getDocumentType(): string;
 }

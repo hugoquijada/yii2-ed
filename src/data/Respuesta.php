@@ -2,6 +2,7 @@
 
 namespace eDesarrollos\data;
 
+use hqsoft\reportkit\document\Document;
 use eDesarrollos\rest\Serializer;
 use yii\data\ActiveDataProvider;
 
@@ -24,6 +25,7 @@ class Respuesta {
     "limite" => 0,
     "ordenar" => false
   ];
+  protected $fuenteReporte = null;
 
   public function __set($nombre, $valor) {
     if(!in_array($nombre, $this->atributosPermitidos)) {
@@ -51,6 +53,7 @@ class Respuesta {
 
   public function modelo($modelo) {
     $this->esExitoso();
+    $this->fuenteReporte = $modelo;
     if ($modelo instanceof \yii\db\ActiveRecord) {
       if ($modelo->hasErrors()) {
         $this->esError();
@@ -113,9 +116,13 @@ class Respuesta {
         "limite" => $limite # Elementos por página
       ];
 
+      $registros = $modelo->all();
+      $this->fuenteReporte = $registros;
+
       $s = new Serializer();
       $this->resultado = $s->serialize(new ActiveDataProvider(["query" => $modelo, "pagination" => false]));
     } elseif(is_array($modelo) && isset($modelo[0])) {
+      $this->fuenteReporte = $modelo;
       $total = count($modelo);
       $this->paginacion = [
         "total" => $total,
@@ -124,6 +131,7 @@ class Respuesta {
       ];
       $this->resultado = $modelo;
     } elseif(!empty($modelo)) {
+      $this->fuenteReporte = [$modelo];
       $this->paginacion = [
         "total" => 1,
         "pagina" => 1,
@@ -139,6 +147,31 @@ class Respuesta {
       $this->resultado = [];
     }
     return $this;
+  }
+
+  public function documento(Document $documento) {
+    $this->fuenteReporte = $documento;
+    return $this;
+  }
+
+  public function crearDocumentoReporte(string $tipo = Document::TYPE_SPREADSHEET): Document {
+    if ($this->fuenteReporte instanceof Document) {
+      return $this->fuenteReporte;
+    }
+
+    $fuente = $this->fuenteReporte;
+    if ($fuente instanceof \yii\db\ActiveRecord) {
+      $fuente = [$fuente];
+    }
+
+    if (is_array($fuente) && !empty($fuente)) {
+      $primero = reset($fuente);
+      if ($primero instanceof \eDesarrollos\models\ModeloBase) {
+        return $primero::documentoReporte($fuente, $tipo);
+      }
+    }
+
+    return new Document();
   }
 
   public function esExitoso($codigo = 200) {

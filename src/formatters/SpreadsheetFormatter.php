@@ -6,6 +6,10 @@ use hqsoft\reportkit\renderers\spreadsheet\SpreadsheetRenderer;
 use Yii;
 
 class SpreadsheetFormatter extends ReportFormatter {
+  protected function getDocumentType(): string {
+    return \hqsoft\reportkit\document\Document::TYPE_SPREADSHEET;
+  }
+
   public function format($response) {
     $response->getHeaders()->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 

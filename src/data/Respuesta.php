@@ -23,7 +23,8 @@ class Respuesta {
     "total" => 0,
     "pagina" => 0,
     "limite" => 0,
-    "ordenar" => false
+    "ordenar" => false,
+    "todo" => false,
   ];
   protected $fuenteReporte = null;
 
@@ -42,10 +43,11 @@ class Respuesta {
     return null;
   }
 
-  public function __construct($modelo = null, $limite = 20, $pagina = 1, $ordenar = false) {
+  public function __construct($modelo = null, $limite = 20, $pagina = 1, $ordenar = false, $todo = false) {
     $this->parametros['limite'] = $limite;
     $this->parametros['pagina'] = $pagina;
     $this->parametros['ordenar'] = $ordenar;
+    $this->parametros['todo'] = $todo;
     if($modelo !== null) {
       $this->modelo($modelo);
     }
@@ -72,22 +74,16 @@ class Respuesta {
       $limite = intval($this->parametros['limite']);
       $pagina = intval($this->parametros['pagina']);
       $ordenar = $this->parametros['ordenar'];
+      $todo = (bool)$this->parametros['todo'];
       $total = $modelo->count();
 
       if($pagina <= 0) {
         $pagina = 1;
       }
 
-      $offset = 0;
-      if (($pagina - 1) >= 0) {
-        $offset = $limite * ($pagina - 1);
+      if ($limite <= 0) {
+        $limite = 1;
       }
-
-      if($offset > 0) {
-        $modelo->offset($offset);
-      }
-
-      $modelo->limit($limite);
 
       if ($ordenar !== false && ($campo = trim($ordenar)) !== "") {
         $separar = explode(",", $ordenar);
@@ -106,8 +102,24 @@ class Respuesta {
         }
       }
 
-      if ($limite > $total || $limite <= 0) {
-        $limite = $total;
+      if ($todo) {
+        $pagina = 1;
+        $limite = $total > 0 ? $total : 1;
+      } else {
+        $offset = 0;
+        if (($pagina - 1) >= 0) {
+          $offset = $limite * ($pagina - 1);
+        }
+
+        if($offset > 0) {
+          $modelo->offset($offset);
+        }
+
+        $modelo->limit($limite);
+
+        if ($limite > $total) {
+          $limite = $total > 0 ? $total : 1;
+        }
       }
 
       $this->paginacion = [

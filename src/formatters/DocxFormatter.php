@@ -2,8 +2,7 @@
 
 namespace eDesarrollos\formatters;
 
-use eDesarrollos\formatters\renderers\DocxRenderer;
-use hqsoft\reportkit\document\Document;
+use hqsoft\reportkit\renderers\docx\DocxRenderer;
 
 class DocxFormatter extends ReportFormatter {
   protected function getDocumentType(): string {

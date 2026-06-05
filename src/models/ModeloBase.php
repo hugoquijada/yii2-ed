@@ -82,25 +82,20 @@ class ModeloBase extends \yii\db\ActiveRecord {
   }
 
   public static function columnasReporte(): array {
-    $modelo = new static();
-    $columnas = [];
-    foreach ($modelo->fields() as $key => $value) {
-      $atributo = is_string($key) ? $key : $value;
-      if (!is_string($atributo)) {
-        continue;
-      }
-      $columnas[$atributo] = $modelo->getAttributeLabel($atributo);
-    }
-
-    return $columnas;
+    return (new static())->fields();
   }
 
   public function filaReporte(): array {
-    return $this->toArray(array_keys(static::columnasReporte()));
+    $fila = [];
+    foreach (static::normalizarColumnasReporte() as $columna) {
+      $fila[$columna['id']] = $this->resolverValorColumnaReporte($columna);
+    }
+
+    return $fila;
   }
 
   public static function documentoReporte(array $registros, string $tipo = Document::TYPE_SPREADSHEET): Document {
-    $columnas = static::columnasReporte();
+    $columnas = static::normalizarColumnasReporte();
     if (empty($columnas)) {
       return new Document();
     }
@@ -148,8 +143,8 @@ class ModeloBase extends \yii\db\ActiveRecord {
       $estiloEncabezado = static::resolverEstiloReporte($config['encabezado']['estilo'] ?? CellStyle::header());
       $documento->row(function (Row $row) use ($columnas, $spans, $estiloEncabezado) {
         $indice = 0;
-        foreach ($columnas as $etiqueta) {
-          $columna = $row->col($spans[$indice] ?? 1)->text((string)$etiqueta);
+        foreach ($columnas as $configColumna) {
+          $columna = $row->col($spans[$indice] ?? 1)->text((string)$configColumna['label']);
           if ($estiloEncabezado !== null) {
             $columna->style($estiloEncabezado);
           }
@@ -167,8 +162,8 @@ class ModeloBase extends \yii\db\ActiveRecord {
 
       $documento->row(function (Row $row) use ($columnas, $fila, $spans, $estiloFila, $estiloFilaPar, $estiloFilaImpar, $esPar) {
         $indice = 0;
-        foreach ($columnas as $atributo => $_etiqueta) {
-          $valor = $fila[$atributo] ?? '';
+        foreach ($columnas as $configColumna) {
+          $valor = $fila[$configColumna['id']] ?? '';
 
           if (is_array($valor) || is_object($valor)) {
             $valor = json_encode($valor, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -188,6 +183,47 @@ class ModeloBase extends \yii\db\ActiveRecord {
     }
 
     return $documento;
+  }
+
+  protected static function normalizarColumnasReporte(): array {
+    $modelo = new static();
+    $columnas = [];
+
+    foreach (static::columnasReporte() as $key => $value) {
+      $id = is_string($key) ? $key : (is_string($value) ? $value : null);
+      if ($id === null) {
+        continue;
+      }
+
+      $source = $id;
+      $resolver = null;
+
+      if ($value instanceof \Closure) {
+        $resolver = $value;
+      } elseif (is_callable($value)) {
+        $resolver = $value;
+      } elseif (is_string($key) && is_string($value)) {
+        $source = $value;
+      }
+
+      $columnas[] = [
+        'id' => $id,
+        'source' => $source,
+        'label' => $modelo->getAttributeLabel($id),
+        'resolver' => $resolver,
+      ];
+    }
+
+    return $columnas;
+  }
+
+  protected function resolverValorColumnaReporte(array $columna) {
+    if (isset($columna['resolver']) && is_callable($columna['resolver'])) {
+      return call_user_func($columna['resolver'], $this);
+    }
+
+    $source = $columna['source'] ?? $columna['id'];
+    return $this->{$source} ?? null;
   }
 
   protected static function obtenerConfiguracionReporte(string $tipo): array {
@@ -218,11 +254,65 @@ class ModeloBase extends \yii\db\ActiveRecord {
       'formatos' => [],
     ];
 
-    $config = static::configuracionReporte();
-    $configFormato = $config['formatos'][$tipo] ?? [];
-    unset($config['formatos']);
+    $configGlobal = Yii::$app !== null ? (Yii::$app->params['exportacion'] ?? []) : [];
+    $configModeloBruto = static::configuracionReporte();
+    $configModelo = static::restarConfiguracionReporte($configModeloBruto, $configGlobal);
+    $configModeloAgrupado = static::obtenerSobrescriturasAgrupadas($configModeloBruto, $configGlobal);
 
-    return ArrayHelper::merge($default, $config, $configFormato);
+    $configGlobalFormato = $configGlobal['formatos'][$tipo] ?? [];
+    $configModeloFormato = $configModelo['formatos'][$tipo] ?? [];
+
+    unset($configGlobal['formatos'], $configModelo['formatos'], $configModeloAgrupado['formatos']);
+
+    return ArrayHelper::merge(
+      $default,
+      $configGlobal,
+      $configGlobalFormato,
+      $configModelo,
+      $configModeloAgrupado,
+      $configModeloFormato
+    );
+  }
+
+  protected static function restarConfiguracionReporte(array $configuracion, array $base): array {
+    $resultado = [];
+
+    foreach ($configuracion as $llave => $valor) {
+      if (!array_key_exists($llave, $base)) {
+        $resultado[$llave] = $valor;
+        continue;
+      }
+
+      $valorBase = $base[$llave];
+      if (is_array($valor) && is_array($valorBase)) {
+        $diferencia = static::restarConfiguracionReporte($valor, $valorBase);
+        if ($diferencia !== []) {
+          $resultado[$llave] = $diferencia;
+        }
+        continue;
+      }
+
+      if ($valor != $valorBase) {
+        $resultado[$llave] = $valor;
+      }
+    }
+
+    return $resultado;
+  }
+
+  protected static function obtenerSobrescriturasAgrupadas(array $configuracion, array $base): array {
+    $resultado = [];
+    foreach (['titulo', 'logo', 'encabezado', 'fila'] as $llave) {
+      if (!array_key_exists($llave, $configuracion) || !array_key_exists($llave, $base)) {
+        continue;
+      }
+
+      if ($configuracion[$llave] != $base[$llave]) {
+        $resultado[$llave] = $configuracion[$llave];
+      }
+    }
+
+    return $resultado;
   }
 
   protected static function obtenerSpansReporte(int $totalColumnas, int $maxColumnas): array {

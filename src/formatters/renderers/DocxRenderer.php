@@ -76,27 +76,11 @@ class DocxRenderer {
   }
 
   private function buildCellStyle(array $data): array {
-    $style = [];
-    if (!empty($data['style']) && is_array($data['style'])) {
-      foreach ($data['style'] as $item) {
-        if ($item instanceof \hqsoft\reportkit\document\CellStyle) {
-          $style = array_merge($style, $this->mapCellStyle($item->toArray()));
-        }
-      }
-    }
-    return $style;
+    return $this->mapCellStyle($this->resolveStyleArray($data));
   }
 
   private function buildFontStyle(array $data): array {
-    $style = [];
-    if (!empty($data['style']) && is_array($data['style'])) {
-      foreach ($data['style'] as $item) {
-        if ($item instanceof \hqsoft\reportkit\document\CellStyle) {
-          $style = array_merge($style, $this->mapFontStyle($item->toArray()));
-        }
-      }
-    }
-    return $style;
+    return $this->mapFontStyle($this->resolveStyleArray($data));
   }
 
   private function buildContentFontStyle(CellContent $item, array $data): array {
@@ -121,16 +105,12 @@ class DocxRenderer {
     if (!empty($data['align'])) {
       $style['alignment'] = $this->mapAlignment($data['align']);
     }
-    if (!empty($data['style']) && is_array($data['style'])) {
-      foreach ($data['style'] as $item) {
-        if ($item instanceof \hqsoft\reportkit\document\CellStyle) {
-          $raw = $item->toArray();
-          if (!empty($raw['text-align'])) {
-            $style['alignment'] = $this->mapAlignment($raw['text-align']);
-          }
-        }
-      }
+
+    $raw = $this->resolveStyleArray($data);
+    if (!empty($raw['text-align'])) {
+      $style['alignment'] = $this->mapAlignment($raw['text-align']);
     }
+
     return $style;
   }
 
@@ -171,5 +151,10 @@ class DocxRenderer {
       default:
         return 'left';
     }
+  }
+
+  private function resolveStyleArray(array $data): array {
+    $style = $data['style'] ?? [];
+    return is_array($style) ? $style : [];
   }
 }

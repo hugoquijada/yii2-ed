@@ -160,12 +160,13 @@ class SpreadsheetRenderer implements IRenderer {
   }
 
   private function extractConfiguredWidth(array $data): ?int {
-    if (empty($data['style']) || !is_array($data['style'])) {
+    $style = $this->resolveStyleArray($data);
+    if (empty($style) || !is_array($style)) {
       return null;
     }
 
     $width = null;
-    foreach ($data['style'] as $key => $value) {
+    foreach ($style as $key => $value) {
       if ($key === 'width') {
         $width = $this->normalizeWidth($value);
       }
@@ -189,18 +190,9 @@ class SpreadsheetRenderer implements IRenderer {
   private function applyStyles($ws, string $range, array $data, Document $doc): void {
     $finalStyle = [];
 
-    if (!empty($data['style'])) {
-      $stylesToApply = is_array($data['style']) ? $data['style'] : [$data['style']];
-      foreach ($stylesToApply as $s) {
-        if (is_string($s)) {
-          $resolved = $doc->getStyle($s);
-          if ($resolved) {
-            $this->mergeStyleArray($finalStyle, $resolved->toArray());
-          }
-        } elseif ($s instanceof \hqsoft\reportkit\document\CellStyle) {
-          $this->mergeStyleArray($finalStyle, $s->toArray());
-        }
-      }
+    $resolvedStyle = $this->resolveStyleArray($data, $doc);
+    if (!empty($resolvedStyle)) {
+      $this->mergeStyleArray($finalStyle, $resolvedStyle);
     }
 
     if (!empty($data['align'])) {
@@ -258,6 +250,36 @@ class SpreadsheetRenderer implements IRenderer {
         $target[$key] = $value;
       }
     }
+  }
+
+  private function resolveStyleArray(array $data, ?Document $doc = null): array {
+    $style = $data['style'] ?? [];
+    if (!is_array($style)) {
+      $style = [];
+    }
+
+    $refs = $data['style_refs'] ?? [];
+    if (!is_array($refs) || $refs === []) {
+      return $style;
+    }
+
+    $resolved = [];
+    foreach ($refs as $ref) {
+      if (is_string($ref) && $doc !== null) {
+        $named = $doc->getStyle($ref);
+        if ($named !== null) {
+          $this->mergeStyleArray($resolved, $named->toArray());
+        }
+        continue;
+      }
+
+      if ($ref instanceof \hqsoft\reportkit\document\CellStyle) {
+        $this->mergeStyleArray($resolved, $ref->toArray());
+      }
+    }
+
+    $this->mergeStyleArray($resolved, $style);
+    return $resolved;
   }
 
   private function mapAlign(string $align): string {

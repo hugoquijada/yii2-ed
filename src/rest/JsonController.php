@@ -47,6 +47,10 @@ class JsonController extends Controller {
   public $pagina = null;
   /** @var string */
   public $ordenar = null;
+  /** @var string */
+  public $formato = self::FORMATO_JSON;
+  /** @var bool */
+  public $todo = false;
 
   /** @var string */
   public $serializer = 'eDesarrollos\rest\Serializer';
@@ -94,10 +98,12 @@ class JsonController extends Controller {
       Yii::$app->end();
     }
 
+    $this->formato = $this->req->get("formato", self::FORMATO_JSON);
     if ($this->req->isGet) {
-      $this->limite = $this->req->get("limite", 20);
-      $this->pagina = $this->req->get("pagina", 0);
+      $this->limite = max(1, intval($this->req->get("limite", 20)));
+      $this->pagina = max(1, intval($this->req->get("pagina", 1)));
       $this->ordenar = $this->req->get("ordenar", "");
+      $this->todo = $this->debeExportarTodo();
     }
     if ($this->modelClass !== null) {
       $model = new $this->modelClass;
@@ -110,13 +116,14 @@ class JsonController extends Controller {
           ->where(["{{{$tableName}}}.[[eliminado]]" => null]);
       }
     }
-    $formato = $this->req->get("formato", self::FORMATO_JSON);
+    $formato = $this->formato;
     if ($formato === self::FORMATO_JSON) {
       $this->res->format = Response::FORMAT_JSON;
     } elseif ($formato === self::FORMATO_XML) {
       $this->res->format = Response::FORMAT_XML;
     } elseif ($formato === self::FORMATO_HTML) {
-      $this->res->format = Response::FORMAT_HTML;
+      $this->res->format = self::FORMATO_HTML;
+      $this->res->formatters[self::FORMATO_HTML] = 'eDesarrollos\formatters\HtmlFormatter';
     } elseif ($formato === self::FORMATO_SQL) {
       $this->res->format = Response::FORMAT_RAW;
     } elseif ($formato === self::FORMATO_CSV) {
@@ -154,7 +161,7 @@ class JsonController extends Controller {
 
     $this->buscador($query, $this->req);
 
-    return new Respuesta($query, $this->limite, $this->pagina, $this->ordenar);
+    return new Respuesta($query, $this->limite, $this->pagina, $this->ordenar, $this->todo);
   }
 
   public function actionPost() {
@@ -218,5 +225,22 @@ class JsonController extends Controller {
     if ($id !== "") {
       $query->andWhere([$this->modeloID => $id]);
     }
+  }
+
+  protected function debeExportarTodo(): bool {
+    if (!$this->esFormatoDocumento($this->formato)) {
+      return false;
+    }
+
+    return filter_var($this->req->get('todo', false), FILTER_VALIDATE_BOOLEAN);
+  }
+
+  protected function esFormatoDocumento(string $formato): bool {
+    return in_array($formato, [
+      self::FORMATO_CSV,
+      self::FORMATO_XLSX,
+      self::FORMATO_PDF,
+      self::FORMATO_DOCX,
+    ], true);
   }
 }

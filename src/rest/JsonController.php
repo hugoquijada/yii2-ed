@@ -63,6 +63,14 @@ class JsonController extends Controller {
     return [];
   }
 
+  public static function openapiControlador(): array {
+    return [];
+  }
+
+  public static function openapiAcciones(): array {
+    return [];
+  }
+
   public function behaviors() {
     $behavior = parent::behaviors();
     $behavior['contentNegotiator'] =  [

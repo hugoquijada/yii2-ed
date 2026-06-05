@@ -110,9 +110,12 @@ HTML;
       $controllerId = Inflector::camel2id($controllerName);
       $basePath = '/' . ltrim(trim($moduleId . '/' . $controllerId, '/'), '/');
       $tagName = $basePath . '.json';
+      $controllerOpenapi = $this->resolveControllerOpenapi($reflection);
       $document['tags'][$tagName] = [
         'name' => $tagName,
-        'description' => $this->extractSummary($reflection->getDocComment(), $controllerName),
+        'description' => $controllerOpenapi['description']
+          ?? $controllerOpenapi['descripcion']
+          ?? $this->extractSummary($reflection->getDocComment(), $controllerName),
       ];
 
       $modelClass = $this->resolveModelClass($reflection);
@@ -130,6 +133,7 @@ HTML;
     $supportsGet = $modelClass !== null || $this->declaresMethod($controller, 'actionIndex');
     $supportsWrite = $modelClass !== null || $this->declaresMethod($controller, 'actionPost');
     $supportsDelete = $modelClass !== null || $this->declaresMethod($controller, 'actionDelete');
+    $accionesOpenapi = $this->resolveActionOpenapi($controller);
 
     if (!$supportsGet && !$supportsWrite && !$supportsDelete) {
       return;
@@ -140,9 +144,12 @@ HTML;
     $modelTitle = $schemaName ?? $controller->getShortName();
 
     if ($supportsGet) {
+      $configAccion = $accionesOpenapi['index'] ?? [];
       $paths[$path]['get'] = [
         'tags' => [$tagName],
-        'summary' => $modelClass !== null ? "Lista {$modelTitle}" : 'Consulta registros',
+        'summary' => $configAccion['summary']
+          ?? $configAccion['resumen']
+          ?? ($modelClass !== null ? "Lista {$modelTitle}" : 'Consulta registros'),
         'parameters' => [$this->buildFormatParameter()],
         'responses' => [
           '200' => [
@@ -156,14 +163,18 @@ HTML;
         ],
         'security' => $security,
       ];
+      $this->appendOperationDescription($paths[$path]['get'], $configAccion);
     }
 
     if ($supportsWrite) {
       $writeSchema = $schemaName !== null ? ['$ref' => '#/components/schemas/' . $schemaName] : ['type' => 'object'];
       foreach (['post' => 'Guarda registro', 'put' => 'Actualiza registro'] as $method => $summary) {
+        $configAccion = $accionesOpenapi[$method] ?? [];
         $paths[$path][$method] = [
           'tags' => [$tagName],
-          'summary' => $modelClass !== null ? $summary . " de {$modelTitle}" : $summary,
+          'summary' => $configAccion['summary']
+            ?? $configAccion['resumen']
+            ?? ($modelClass !== null ? $summary . " de {$modelTitle}" : $summary),
           'parameters' => [$this->buildFormatParameter()],
           'requestBody' => [
             'required' => true,
@@ -200,13 +211,17 @@ HTML;
           ],
           'security' => $security,
         ];
+        $this->appendOperationDescription($paths[$path][$method], $configAccion);
       }
     }
 
     if ($supportsDelete) {
+      $configAccion = $accionesOpenapi['delete'] ?? [];
       $paths[$path]['delete'] = [
         'tags' => [$tagName],
-        'summary' => $modelClass !== null ? "Elimina {$modelTitle}" : 'Elimina registro',
+        'summary' => $configAccion['summary']
+          ?? $configAccion['resumen']
+          ?? ($modelClass !== null ? "Elimina {$modelTitle}" : 'Elimina registro'),
         'parameters' => [$this->buildFormatParameter()],
         'responses' => [
           '200' => [
@@ -220,12 +235,14 @@ HTML;
         ],
         'security' => $security,
       ];
+      $this->appendOperationDescription($paths[$path]['delete'], $configAccion);
     }
   }
 
   protected function appendCustomOperations(array &$paths, ReflectionClass $controller, string $basePath, string $tagName): void {
     $security = $controller->isSubclassOf(AuthController::class) ? [['bearerAuth' => []]] : [];
     $hiddenActions = $this->resolveHiddenActions($controller);
+    $accionesOpenapi = $this->resolveActionOpenapi($controller);
 
     foreach ($controller->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
       if ($method->getDeclaringClass()->getName() !== $controller->getName()) {
@@ -245,10 +262,13 @@ HTML;
 
       $path = $basePath . '/' . $actionId . '.{format}';
       $httpMethod = $this->guessHttpMethod($actionId);
+      $configAccion = $accionesOpenapi[$actionId] ?? [];
 
       $paths[$path][$httpMethod] = [
         'tags' => [$tagName],
-        'summary' => $this->extractSummary($method->getDocComment(), ucfirst(str_replace('-', ' ', $actionId))),
+        'summary' => $configAccion['summary']
+          ?? $configAccion['resumen']
+          ?? $this->extractSummary($method->getDocComment(), ucfirst(str_replace('-', ' ', $actionId))),
         'parameters' => [$this->buildFormatParameter()],
         'responses' => [
           '200' => [
@@ -262,6 +282,7 @@ HTML;
         ],
         'security' => $security,
       ];
+      $this->appendOperationDescription($paths[$path][$httpMethod], $configAccion);
     }
   }
 
@@ -463,6 +484,42 @@ HTML;
     }
   }
 
+  protected function resolveControllerOpenapi(ReflectionClass $controller): array {
+    if (!$controller->hasMethod('openapiControlador')) {
+      return [];
+    }
+
+    $method = $controller->getMethod('openapiControlador');
+    if (!$method->isStatic() || !$method->isPublic() || $method->getNumberOfRequiredParameters() > 0) {
+      return [];
+    }
+
+    try {
+      $result = $method->invoke(null);
+      return is_array($result) ? $result : [];
+    } catch (\Throwable $th) {
+      return [];
+    }
+  }
+
+  protected function resolveActionOpenapi(ReflectionClass $controller): array {
+    if (!$controller->hasMethod('openapiAcciones')) {
+      return [];
+    }
+
+    $method = $controller->getMethod('openapiAcciones');
+    if (!$method->isStatic() || !$method->isPublic() || $method->getNumberOfRequiredParameters() > 0) {
+      return [];
+    }
+
+    try {
+      $result = $method->invoke(null);
+      return is_array($result) ? $result : [];
+    } catch (\Throwable $th) {
+      return [];
+    }
+  }
+
   protected function declaresMethod(ReflectionClass $controller, string $method): bool {
     return $controller->hasMethod($method) && $controller->getMethod($method)->getDeclaringClass()->getName() === $controller->getName();
   }
@@ -583,6 +640,13 @@ HTML;
     }
 
     return $fallback;
+  }
+
+  protected function appendOperationDescription(array &$operation, array $config): void {
+    $description = $config['description'] ?? $config['descripcion'] ?? null;
+    if (is_string($description) && trim($description) !== '') {
+      $operation['description'] = $description;
+    }
   }
 
   protected function escapeHtml(string $value): string {

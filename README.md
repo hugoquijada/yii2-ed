@@ -108,6 +108,50 @@ Convenciones disponibles:
 
 - `mostrarEnOpenapi(): bool`
 - `accionesOcultasOpenapi(): array`
+- `openapiControlador(): array`
+- `openapiAcciones(): array`
+
+Ejemplo para describir un controlador y sus acciones:
+
+```php
+/**
+ * Administracion de usuarios del sistema.
+ */
+class UsuarioController extends AuthController {
+  public static function openapiControlador(): array {
+    return [
+      'descripcion' => 'Operaciones disponibles para usuarios.',
+    ];
+  }
+
+  public static function openapiAcciones(): array {
+    return [
+      'index' => [
+        'resumen' => 'Lista usuarios',
+        'descripcion' => 'Regresa el listado paginado de usuarios.',
+      ],
+      'post' => [
+        'resumen' => 'Guarda usuario',
+        'descripcion' => 'Crea o actualiza un usuario.',
+      ],
+      'delete' => [
+        'resumen' => 'Elimina usuario',
+        'descripcion' => 'Marca un usuario como eliminado.',
+      ],
+      'guardar-permiso' => [
+        'resumen' => 'Guarda permiso',
+        'descripcion' => 'Asigna o actualiza un permiso para el usuario.',
+      ],
+    ];
+  }
+}
+```
+
+El indice del arreglo en `openapiAcciones()` debe usar el `actionId` real de Yii:
+
+- `actionGuardarPermiso()` -> `guardar-permiso`
+- `actionIniciarSesion()` -> `iniciar-sesion`
+- `actionRefrescarToken()` -> `refrescar-token`
 
 ## Correo
 

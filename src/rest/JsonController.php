@@ -3,23 +3,14 @@
 namespace eDesarrollos\rest;
 
 use eDesarrollos\data\Respuesta;
-use yii\filters\ContentNegotiator;
-use yii\filters\Cors;
+use yii\db\ActiveQuery;
 use yii\db\Expression;
+use yii\web\Request;
 use yii\web\Response;
 use yii\rest\Controller;
+use yii\filters\ContentNegotiator;
 use Yii;
 
-/**
- * @property \yii\web\Application $app
- * @property \yii\web\Request $req
- * @property \yii\web\Response $res
- * @property \yii\db\ActiveQuery $queryInicial
- * @property int $limite
- * @property int $pagina
- * @property string $ordenar
- * @property string $modelClass
- */
 class JsonController extends Controller {
 
   const FORMATO_HTML = 'html';
@@ -29,23 +20,44 @@ class JsonController extends Controller {
   const FORMATO_CSV = 'csv';
   const FORMATO_XLSX = 'xlsx';
   const FORMATO_PDF = 'pdf';
+  const FORMATO_DOCX = 'docx';
 
+  /** @var \yii\web\Application */
   public $app = null;
+  /** @var Request */
   public $req = null;
+  /** @var Response */
   public $res = null;
 
+  /** @var ActiveQuery */
   public $queryInicial = null;
+  /** @var string */
   public $modelClass = null;
+  /** @var string */
   public $modeloID = 'id';
 
+  /** @var string */
   public $nombreSingular = 'Registro';
+  /** @var string */
   public $nombrePlural = 'Registros';
 
+  /** @var int */
   public $limite = null;
+  /** @var int */
   public $pagina = null;
+  /** @var string */
   public $ordenar = null;
 
+  /** @var string */
   public $serializer = 'eDesarrollos\rest\Serializer';
+
+  public static function mostrarEnOpenapi(): bool {
+    return true;
+  }
+
+  public static function accionesOcultasOpenapi(): array {
+    return [];
+  }
 
   public function behaviors() {
     $behavior = parent::behaviors();
@@ -116,6 +128,9 @@ class JsonController extends Controller {
     } elseif ($formato === self::FORMATO_PDF) {
       $this->res->format = self::FORMATO_PDF;
       $this->res->formatters[self::FORMATO_PDF] = 'eDesarrollos\formatters\PdfFormatter';
+    } elseif ($formato === self::FORMATO_DOCX) {
+      $this->res->format = self::FORMATO_DOCX;
+      $this->res->formatters[self::FORMATO_DOCX] = 'eDesarrollos\formatters\DocxFormatter';
     }
     return true;
   }
@@ -142,7 +157,7 @@ class JsonController extends Controller {
     return new Respuesta($query, $this->limite, $this->pagina, $this->ordenar);
   }
 
-  public function actionGuardar() {
+  public function actionPost() {
     $id = trim($this->req->getBodyParam("id", ""));
     $modelo = null;
 
@@ -168,7 +183,11 @@ class JsonController extends Controller {
       ->mensaje("{$this->nombreSingular} guardado");
   }
 
-  public function actionEliminar() {
+  public function actionPut() {
+    return $this->actionPost();
+  }
+
+  public function actionDelete() {
     $id = trim($this->req->getBodyParam("id", ""));
     $modelo = null;
 
@@ -193,7 +212,7 @@ class JsonController extends Controller {
       ->mensaje("{$this->nombreSingular} eliminado");
   }
 
-  public function buscador(&$query, $request) {
+  public function buscador(ActiveQuery &$query, Request $request) {
     $id = $request->get($this->modeloID, "");
 
     if ($id !== "") {

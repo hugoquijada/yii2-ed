@@ -30,7 +30,11 @@ abstract class ReportFormatter implements ResponseFormatterInterface {
     if ($data instanceof Respuesta) {
       $rows = $data->cuerpo['resultado'] ?? [];
     } elseif (is_array($data)) {
-      $rows = $data;
+      if (isset($data['resultado']) && is_array($data['resultado'])) {
+        $rows = $data['resultado'];
+      } else {
+        $rows = $data;
+      }
     }
 
     $doc = new Document();
@@ -39,10 +43,23 @@ abstract class ReportFormatter implements ResponseFormatterInterface {
       return $doc;
     }
 
+    if (!isset($rows[0])) {
+      $rows = [$rows];
+    }
+
     // Obtener headers de las llaves del primer registro
     $sample = $rows[0];
     if (is_object($sample)) {
       $sample = (array)$sample;
+    }
+    if (!is_array($sample)) {
+      $sample = ['valor' => $sample];
+      $rows = array_map(function ($row) {
+        if (is_array($row) || is_object($row)) {
+          return $row;
+        }
+        return ['valor' => $row];
+      }, $rows);
     }
 
     $headers = array_keys($sample);
@@ -51,12 +68,15 @@ abstract class ReportFormatter implements ResponseFormatterInterface {
     // Ajustar maxColumns si es necesario
     $doc = new Document(null); // DocumentConfig could be passed here
 
-    // Agregar Header
-    $doc->header(function (Row $row) use ($headers) {
+    // Agregar encabezado como primera fila de contenido para evitar
+    // que en PDF se use como encabezado fijo de página.
+    $doc->row(function (Row $row) use ($headers) {
       foreach ($headers as $header) {
         // Capitalizar y quitar guiones/puntos
         $label = ucwords(str_replace(['_', '.'], ' ', $header));
-        $row->colText(1, $label, 'center', true);
+        $row->col(1)
+          ->align('center')
+          ->text($label, true);
       }
     });
 
@@ -75,7 +95,8 @@ abstract class ReportFormatter implements ResponseFormatterInterface {
             $val = json_encode($val);
           }
 
-          $row->colText(1, (string)$val);
+          $row->col(1)
+            ->text((string)$val);
         }
       });
     }

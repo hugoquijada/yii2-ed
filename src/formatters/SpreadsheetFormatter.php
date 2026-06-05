@@ -2,8 +2,7 @@
 
 namespace eDesarrollos\formatters;
 
-use hqsoft\reportkit\renderers\spreadsheet\SpreadsheetRenderer;
-use Yii;
+use eDesarrollos\formatters\renderers\SpreadsheetRenderer;
 
 class SpreadsheetFormatter extends ReportFormatter {
   protected function getDocumentType(): string {

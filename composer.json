@@ -23,7 +23,8 @@
         "yidas/yii2-bower-asset": "2.0.13.1",
         "firebase/php-jwt": "^7.0",
         "ramsey/uuid": "^4.7",
-        "hqsoft/reportkit": "^1.0"
+        "hqsoft/reportkit": "^1.0",
+        "phpoffice/phpword": "^1.1"
     },
     "config": {
         "allow-plugins": {

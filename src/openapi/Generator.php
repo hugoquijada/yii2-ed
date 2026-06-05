@@ -7,6 +7,7 @@ use eDesarrollos\rest\JsonController;
 use ReflectionClass;
 use ReflectionMethod;
 use Yii;
+use yii\db\ColumnSchema;
 use yii\base\Controller;
 use yii\helpers\Inflector;
 
@@ -101,11 +102,14 @@ HTML;
       if (!$reflection->isSubclassOf(Controller::class) || $reflection->isAbstract()) {
         continue;
       }
+      if (!$this->isVisibleInOpenapi($reflection)) {
+        continue;
+      }
 
       $controllerName = preg_replace('/Controller$/', '', $reflection->getShortName());
       $controllerId = Inflector::camel2id($controllerName);
       $basePath = '/' . ltrim(trim($moduleId . '/' . $controllerId, '/'), '/');
-      $tagName = trim($moduleId . ' ' . $controllerName);
+      $tagName = $basePath . '.json';
       $document['tags'][$tagName] = [
         'name' => $tagName,
         'description' => $this->extractSummary($reflection->getDocComment(), $controllerName),
@@ -124,8 +128,8 @@ HTML;
 
   protected function appendBaseOperations(array &$paths, ReflectionClass $controller, string $basePath, string $tagName, ?string $modelClass, ?string $schemaName): void {
     $supportsGet = $modelClass !== null || $this->declaresMethod($controller, 'actionIndex');
-    $supportsWrite = $modelClass !== null || $this->declaresMethod($controller, 'actionGuardar');
-    $supportsDelete = $modelClass !== null || $this->declaresMethod($controller, 'actionEliminar');
+    $supportsWrite = $modelClass !== null || $this->declaresMethod($controller, 'actionPost');
+    $supportsDelete = $modelClass !== null || $this->declaresMethod($controller, 'actionDelete');
 
     if (!$supportsGet && !$supportsWrite && !$supportsDelete) {
       return;
@@ -178,6 +182,21 @@ HTML;
                 ],
               ],
             ],
+            '400' => [
+              'description' => 'Error de validacion al guardar el registro',
+              'content' => [
+                'application/json' => [
+                  'schema' => $this->buildValidationErrorResponseSchema(),
+                  'example' => [
+                    'errores' => [
+                      'nombre_campo' => 'El campo nombre_campo no puede estar vacío',
+                      'otra_columna' => 'El campo otra_columna tiene otro error',
+                    ],
+                    'mensaje' => 'Ocurrió un problema al guardar el registro, por favor contacta a soporte técnico',
+                  ],
+                ],
+              ],
+            ],
           ],
           'security' => $security,
         ];
@@ -206,6 +225,7 @@ HTML;
 
   protected function appendCustomOperations(array &$paths, ReflectionClass $controller, string $basePath, string $tagName): void {
     $security = $controller->isSubclassOf(AuthController::class) ? [['bearerAuth' => []]] : [];
+    $hiddenActions = $this->resolveHiddenActions($controller);
 
     foreach ($controller->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
       if ($method->getDeclaringClass()->getName() !== $controller->getName()) {
@@ -216,7 +236,10 @@ HTML;
       }
 
       $actionId = Inflector::camel2id($matches[1]);
-      if (in_array($actionId, ['index', 'guardar', 'eliminar', 'options', 'error'], true)) {
+      if (in_array($actionId, ['index', 'post', 'put', 'delete', 'options', 'error'], true)) {
+        continue;
+      }
+      if (in_array($actionId, $hiddenActions, true)) {
         continue;
       }
 
@@ -244,6 +267,10 @@ HTML;
 
   protected function appendModelSchema(array &$schemas, string $modelClass): string {
     $reflection = new ReflectionClass($modelClass);
+    if (!$this->isVisibleInOpenapi($reflection)) {
+      return $reflection->getShortName();
+    }
+
     $schemaName = $reflection->getShortName();
     if (isset($schemas[$schemaName])) {
       return $schemaName;
@@ -253,6 +280,7 @@ HTML;
     $fields = $model->fields();
     $labels = $model->attributeLabels();
     $rules = method_exists($model, 'rules') ? $model->rules() : [];
+    $tableSchema = method_exists($modelClass, 'getTableSchema') ? $modelClass::getTableSchema() : null;
 
     $properties = [];
     $required = [];
@@ -262,10 +290,7 @@ HTML;
       if (!is_string($attribute)) {
         continue;
       }
-      $properties[$attribute] = [
-        'type' => 'string',
-        'description' => $labels[$attribute] ?? $attribute,
-      ];
+      $properties[$attribute] = $this->buildPropertySchema($attribute, $labels[$attribute] ?? $attribute, $tableSchema->columns[$attribute] ?? null);
     }
 
     foreach ($rules as $rule) {
@@ -306,6 +331,9 @@ HTML;
           case 'in':
             $properties[$attribute]['enum'] = array_values($rule['range'] ?? []);
             break;
+          case 'safe':
+            $this->applySafeRuleSchema($properties[$attribute], $attribute, $tableSchema->columns[$attribute] ?? null);
+            break;
         }
       }
     }
@@ -328,6 +356,61 @@ HTML;
     return $schemaName;
   }
 
+  protected function buildPropertySchema(string $attribute, string $description, ?ColumnSchema $columnSchema): array {
+    $schema = [
+      'type' => 'string',
+      'description' => $description,
+    ];
+
+    if ($columnSchema === null) {
+      return $schema;
+    }
+
+    $type = $columnSchema->type;
+    if (in_array($type, ['integer', 'smallint', 'bigint'], true)) {
+      $schema['type'] = 'integer';
+    } elseif (in_array($type, ['float', 'double', 'decimal', 'money'], true)) {
+      $schema['type'] = 'number';
+    } elseif (in_array($type, ['boolean'], true)) {
+      $schema['type'] = 'boolean';
+    } elseif ($type === 'date') {
+      $schema['type'] = 'string';
+      $schema['format'] = 'date';
+    } elseif (in_array($type, ['datetime', 'timestamp', 'time'], true)) {
+      $schema['type'] = 'string';
+      $schema['format'] = $type === 'time' ? 'time' : 'date-time';
+    } else {
+      $schema['type'] = 'string';
+    }
+
+    if (is_int($columnSchema->size) && $columnSchema->size > 0 && $schema['type'] === 'string') {
+      $schema['maxLength'] = $columnSchema->size;
+    }
+
+    return $schema;
+  }
+
+  protected function applySafeRuleSchema(array &$property, string $attribute, ?ColumnSchema $columnSchema): void {
+    if ($columnSchema !== null) {
+      $type = $columnSchema->type;
+      if ($type === 'date') {
+        $property['type'] = 'string';
+        $property['format'] = 'date';
+        return;
+      }
+      if (in_array($type, ['datetime', 'timestamp', 'time'], true)) {
+        $property['type'] = 'string';
+        $property['format'] = $type === 'time' ? 'time' : 'date-time';
+        return;
+      }
+    }
+
+    if (preg_match('/(^|_)(fecha|creado|modificado|eliminado|updated|created|deleted|timestamp|hora)(_|$)/i', $attribute)) {
+      $property['type'] = 'string';
+      $property['format'] = 'date-time';
+    }
+  }
+
   protected function resolveModelClass(ReflectionClass $controller): ?string {
     $defaults = $controller->getDefaultProperties();
     $modelClass = $defaults['modelClass'] ?? null;
@@ -337,6 +420,47 @@ HTML;
 
     $modelClass = ltrim($modelClass, '\\');
     return class_exists($modelClass) ? $modelClass : null;
+  }
+
+  protected function isVisibleInOpenapi(ReflectionClass $reflection): bool {
+    if (!$reflection->hasMethod('mostrarEnOpenapi')) {
+      return true;
+    }
+
+    $method = $reflection->getMethod('mostrarEnOpenapi');
+    if (!$method->isStatic() || !$method->isPublic() || $method->getNumberOfRequiredParameters() > 0) {
+      return true;
+    }
+
+    try {
+      return (bool)$method->invoke(null);
+    } catch (\Throwable $th) {
+      return true;
+    }
+  }
+
+  protected function resolveHiddenActions(ReflectionClass $controller): array {
+    if (!$controller->hasMethod('accionesOcultasOpenapi')) {
+      return [];
+    }
+
+    $method = $controller->getMethod('accionesOcultasOpenapi');
+    if (!$method->isStatic() || !$method->isPublic() || $method->getNumberOfRequiredParameters() > 0) {
+      return [];
+    }
+
+    try {
+      $result = $method->invoke(null);
+      if (!is_array($result)) {
+        return [];
+      }
+
+      return array_values(array_filter(array_map(function ($action) {
+        return is_string($action) ? trim($action) : '';
+      }, $result)));
+    } catch (\Throwable $th) {
+      return [];
+    }
   }
 
   protected function declaresMethod(ReflectionClass $controller, string $method): bool {
@@ -369,8 +493,6 @@ HTML;
       'properties' => [
         'resultado' => $resultado,
         'mensaje' => ['type' => 'string'],
-        'errores' => ['type' => 'object', 'additionalProperties' => true],
-        'detalle' => ['type' => 'object', 'additionalProperties' => true],
         'paginacion' => [
           'type' => 'object',
           'properties' => [
@@ -378,9 +500,12 @@ HTML;
             'pagina' => ['type' => 'integer'],
             'limite' => ['type' => 'integer'],
           ],
+          'required' => ['total', 'pagina', 'limite'],
+          'additionalProperties' => false,
         ],
       ],
-      'additionalProperties' => true,
+      'required' => ['resultado', 'paginacion'],
+      'additionalProperties' => false,
     ];
   }
 
@@ -392,13 +517,11 @@ HTML;
     return [
       'type' => 'object',
       'properties' => [
-        'resultado' => ['type' => 'array', 'items' => ['type' => 'object']],
         'mensaje' => ['type' => 'string'],
         'errores' => ['type' => 'object', 'additionalProperties' => true],
         'detalle' => $detalle,
-        'paginacion' => ['type' => 'object', 'additionalProperties' => true],
       ],
-      'additionalProperties' => true,
+      'additionalProperties' => false,
     ];
   }
 
@@ -406,13 +529,30 @@ HTML;
     return [
       'type' => 'object',
       'properties' => [
-        'resultado' => ['type' => 'array', 'items' => ['type' => 'object']],
         'mensaje' => ['type' => 'string'],
         'errores' => ['type' => 'object', 'additionalProperties' => true],
         'detalle' => ['type' => 'object', 'additionalProperties' => true],
-        'paginacion' => ['type' => 'object', 'additionalProperties' => true],
       ],
-      'additionalProperties' => true,
+      'additionalProperties' => false,
+    ];
+  }
+
+  protected function buildValidationErrorResponseSchema(): array {
+    return [
+      'type' => 'object',
+      'properties' => [
+        'errores' => [
+          'type' => 'object',
+          'additionalProperties' => [
+            'type' => 'string',
+          ],
+        ],
+        'mensaje' => [
+          'type' => 'string',
+        ],
+      ],
+      'required' => ['errores', 'mensaje'],
+      'additionalProperties' => false,
     ];
   }
 

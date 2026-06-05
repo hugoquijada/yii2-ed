@@ -69,6 +69,10 @@ class ModeloBase extends \yii\db\ActiveRecord {
     return static::nombrePlural();
   }
 
+  public static function mostrarEnOpenapi(): bool {
+    return true;
+  }
+
   public static function configuracionReporte(): array {
     if (Yii::$app === null) {
       return [];
@@ -142,7 +146,7 @@ class ModeloBase extends \yii\db\ActiveRecord {
 
     if (!empty($config['encabezado']['mostrar'])) {
       $estiloEncabezado = static::resolverEstiloReporte($config['encabezado']['estilo'] ?? CellStyle::header());
-      $documento->header(function (Row $row) use ($columnas, $spans, $estiloEncabezado) {
+      $documento->row(function (Row $row) use ($columnas, $spans, $estiloEncabezado) {
         $indice = 0;
         foreach ($columnas as $etiqueta) {
           $columna = $row->col($spans[$indice] ?? 1)->text((string)$etiqueta);

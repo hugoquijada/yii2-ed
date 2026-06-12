@@ -29,6 +29,11 @@ class Generator {
       'servers' => $this->config['servers'] ?? [],
       'tags' => [],
       'paths' => [],
+      'security' => [
+        [
+          "bearerAuth" => []
+        ]
+      ],
       'components' => [
         'securitySchemes' => [
           'bearerAuth' => [

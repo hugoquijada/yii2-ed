@@ -7,10 +7,10 @@ class UrlRule extends \yii\rest\UrlRule {
   public $pluralize = false;
 
   public $patterns = [
-    'PUT' => 'guardar',
-    'DELETE' => 'eliminar',
+    'PUT' => 'put',
+    'DELETE' => 'delete',
     'GET,HEAD' => 'index',
-    'POST' => 'guardar',
+    'POST' => 'post',
     'GET,HEAD' => 'index',
     '' => 'options',
   ];

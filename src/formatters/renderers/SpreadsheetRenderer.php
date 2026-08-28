@@ -5,7 +5,7 @@ namespace eDesarrollos\formatters\renderers;
 use hqsoft\reportkit\document\CellContent;
 use hqsoft\reportkit\document\CellImage;
 use hqsoft\reportkit\document\Document;
-use hqsoft\reportkit\Renderers\IRenderer;
+use hqsoft\reportkit\renderers\IRenderer;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;

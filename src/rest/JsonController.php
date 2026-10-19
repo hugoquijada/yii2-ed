@@ -10,6 +10,7 @@ use yii\web\Response;
 use yii\rest\Controller;
 use yii\filters\ContentNegotiator;
 use Yii;
+use yii\web\ForbiddenHttpException;
 
 class JsonController extends Controller {
 
@@ -54,6 +55,9 @@ class JsonController extends Controller {
 
   /** @var string */
   public $serializer = 'eDesarrollos\rest\Serializer';
+
+  /** @var array */
+  public $accionesPermitidas = ["index"];
 
   public static function mostrarEnOpenapi(): bool {
     return true;
@@ -104,6 +108,9 @@ class JsonController extends Controller {
     $headers->set('Access-Control-Max-Age', 86400);
     if ($this->req->isOptions) {
       Yii::$app->end();
+    }
+    if(!in_array($action->id, $this->accionesPermitidas)) {
+      throw new ForbiddenHttpException("Acción no permitida");
     }
 
     $this->formato = $this->req->get("formato", self::FORMATO_JSON);

@@ -13,7 +13,7 @@ class AuthController extends JsonController {
   public $usuario;
   public $permisos = [];
 
-  public $accionesPermitidas = ["index", ];
+  public $accionesPermitidas = ["index", "post", "put", "delete"];
 
   public function behaviors() {
     $behavior = parent::behaviors();

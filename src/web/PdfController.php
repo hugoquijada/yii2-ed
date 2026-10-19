@@ -116,12 +116,6 @@ class PdfController extends \yii\web\Controller {
       $mpdf->useSubstitutions = false;
       $mpdf->simpleTables = false;
       $mpdf->WriteHTML($contenido, \Mpdf\HTMLParserMode::HTML_BODY);
-      $dest = $this->descargar ? "D" : "I";
-      if (strpos($this->nombreArchivo, '.pdf') === false) {
-        $this->nombreArchivo .= ".pdf";
-      }
-      header('Access-Control-Allow-Origin: *');
-      header('Access-Control-Expose-Headers: *');
       $mpdf->Output($this->nombreArchivo, $dest);
     } catch (\Exception $exception) {
       throw $exception;
@@ -132,7 +126,21 @@ class PdfController extends \yii\web\Controller {
   public function afterAction($action, $result) {
     if (!$this->html) {
       $result = str_replace('disabled="disabled"', '', $result);
-      return $this->exportarPdf($result);
+      ob_start();
+      $this->exportarPdf($result);
+      $contenido = ob_get_clean();
+      if(trim($this->nombreArchivo) === "" || trim($this->nombreArchivo) === ".pdf") {
+        $this->nombreArchivo = $this->id;
+        $this->nombreArchivo .= ($action->id !== "index") ? "-{$action->id}.pdf" : ".pdf";
+      }
+      $response = \Yii::$app->getResponse();
+      $response->headers->set('Access-Control-Allow-Origin', 'https://tudominio.com');
+      $response->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+      return $response->sendContentAsFile($contenido, $this->nombreArchivo, [
+        "inline" => !$this->descargar,
+	      "mimeType" => "application/pdf"
+      ]);
     }
     $basePath = Yii::getAlias("@app");
     $file = "{$basePath}/web/css/pdf.css";

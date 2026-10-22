@@ -120,7 +120,6 @@ class PdfController extends \yii\web\Controller {
     } catch (\Exception $exception) {
       throw $exception;
     }
-    \Yii::$app->end();
   }
 
   public function afterAction($action, $result) {
@@ -134,7 +133,7 @@ class PdfController extends \yii\web\Controller {
         $this->nombreArchivo .= ($action->id !== "index") ? "-{$action->id}.pdf" : ".pdf";
       }
       $response = \Yii::$app->getResponse();
-      $response->headers->set('Access-Control-Allow-Origin', 'https://tudominio.com');
+      $response->headers->set('Access-Control-Allow-Origin', '*');
       $response->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
       $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
       return $response->sendContentAsFile($contenido, $this->nombreArchivo, [

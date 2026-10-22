@@ -116,7 +116,7 @@ class PdfController extends \yii\web\Controller {
       $mpdf->useSubstitutions = false;
       $mpdf->simpleTables = false;
       $mpdf->WriteHTML($contenido, \Mpdf\HTMLParserMode::HTML_BODY);
-      $mpdf->Output($this->nombreArchivo, $dest);
+      $mpdf->Output($this->nombreArchivo);
     } catch (\Exception $exception) {
       throw $exception;
     }

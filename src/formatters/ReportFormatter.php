@@ -8,6 +8,21 @@ use eDesarrollos\data\Respuesta;
 use yii\web\ResponseFormatterInterface;
 
 abstract class ReportFormatter implements ResponseFormatterInterface {
+  protected function prepararDescarga($response, string $contenido, string $extension, string $mimeType): void {
+    $nombreArchivo = $this->nombreArchivoReporte($response->data, $extension);
+    $response->sendContentAsFile($contenido, $nombreArchivo, [
+      'mimeType' => $mimeType,
+    ]);
+  }
+
+  protected function nombreArchivoReporte($data, string $extension): string {
+    if ($data instanceof Respuesta) {
+      return $data->nombreArchivoReporte($extension);
+    }
+
+    return 'reporte.' . $extension;
+  }
+
   /**
    * Convierte los datos de la respuesta en un documento de ReportKit
    * 

@@ -10,11 +10,14 @@ class DocxFormatter extends ReportFormatter {
   }
 
   public function format($response) {
-    $response->getHeaders()->set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-
     $doc = $this->convertToDocument($response->data);
     $renderer = new DocxRenderer();
 
-    $response->content = $renderer->render($doc);
+    $this->prepararDescarga(
+      $response,
+      $renderer->render($doc),
+      'docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
   }
 }

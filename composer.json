@@ -27,8 +27,13 @@
         "phpoffice/phpword": "^1.1"
     },
     "config": {
-        "allow-plugins": {
-            "yiisoft/yii2-composer": true
-        }
+    "allow-plugins": {
+      "yiisoft/yii2-composer": true
     }
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "2.0.x-dev"
+    }
+  }
 }

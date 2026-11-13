@@ -60,6 +60,7 @@ Convencion actual:
 - `xlsx`
 - `pdf`
 - `docx`
+- `blob` para respuestas binarias o archivos enviados directamente por la acción
 
 Ejemplo:
 
@@ -67,7 +68,12 @@ Ejemplo:
 /v1/usuario.json
 /v1/usuario.xlsx
 /v1/usuario.pdf
+/v1/archivo.blob
 ```
+
+El formato solicitado en la URL se valida antes de enviar la respuesta. Una
+respuesta binaria sólo es válida para `.blob`; una descarga intentada desde una
+ruta `.json` se reemplaza por un error HTTP 406.
 
 ## Respuesta estandar
 
@@ -89,6 +95,11 @@ Metodos importantes:
 - `columnasReporte()`
 - `filaReporte()`
 - `documentoReporte()`
+
+Por defecto, `columnasReporte()` usa `fields()` bajo
+`ModeloBase::SCENARIO_REPORTE`. Un modelo que necesite columnas documentales
+distintas debe declararlas en `fields()` para ese escenario. Los formatos CSV,
+XLSX, PDF y DOCX se entregan como descarga con su MIME y extensión correctos.
 
 Los formateadores disponibles son:
 

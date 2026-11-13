@@ -11,6 +11,8 @@ use Yii;
 use yii\helpers\ArrayHelper;
 
 class ModeloBase extends \yii\db\ActiveRecord {
+  const SCENARIO_REPORTE = 'reporte';
+
   public function load($data, $nombreFormulario = '') {
     return parent::load($data, $nombreFormulario);
   }
@@ -82,16 +84,30 @@ class ModeloBase extends \yii\db\ActiveRecord {
   }
 
   public static function columnasReporte(): array {
-    return (new static())->fields();
+    $modelo = new static();
+    $modelo->setScenario(static::SCENARIO_REPORTE);
+
+    return $modelo->fields();
   }
 
   public function filaReporte(): array {
-    $fila = [];
-    foreach (static::normalizarColumnasReporte() as $columna) {
-      $fila[$columna['id']] = $this->resolverValorColumnaReporte($columna);
-    }
+    $escenarioAnterior = $this->getScenario();
+    $this->setScenario(static::SCENARIO_REPORTE);
 
-    return $fila;
+    try {
+      $fila = [];
+      foreach (static::normalizarColumnasReporte() as $columna) {
+        $fila[$columna['id']] = $this->resolverValorColumnaReporte($columna);
+      }
+
+      return $fila;
+    } finally {
+      $this->setScenario($escenarioAnterior);
+    }
+  }
+
+  public static function nombreArchivoReporte(string $extension): string {
+    return static::nombrePlural() . '.' . $extension;
   }
 
   public static function documentoReporte(array $registros, string $tipo = Document::TYPE_SPREADSHEET): Document {

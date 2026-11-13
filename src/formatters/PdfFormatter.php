@@ -10,11 +10,9 @@ class PdfFormatter extends ReportFormatter {
   }
 
   public function format($response) {
-    $response->getHeaders()->set('Content-Type', 'application/pdf');
-
     $doc = $this->convertToDocument($response->data);
     $renderer = new PdfRenderer();
 
-    $response->content = $renderer->render($doc);
+    $this->prepararDescarga($response, $renderer->render($doc), 'pdf', 'application/pdf');
   }
 }

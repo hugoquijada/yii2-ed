@@ -186,6 +186,30 @@ class Respuesta {
     return new Document();
   }
 
+  public function nombreArchivoReporte(string $extension): string {
+    $extension = ltrim(strtolower(trim($extension)), '.');
+    $nombre = 'reporte';
+    $fuente = $this->fuenteReporte;
+
+    if ($fuente instanceof \yii\db\ActiveRecord) {
+      $fuente = [$fuente];
+    }
+
+    if (is_array($fuente) && !empty($fuente)) {
+      $primero = reset($fuente);
+      if ($primero instanceof \eDesarrollos\models\ModeloBase) {
+        $nombre = $primero::nombreArchivoReporte($extension);
+      }
+    }
+
+    $nombre = trim((string)$nombre);
+    $nombre = preg_replace('/[\\\\\/\\x00-\\x1F\\x7F]+/', '-', $nombre);
+    $nombre = preg_replace('/\\.' . preg_quote($extension, '/') . '$/i', '', $nombre);
+    $nombre = trim($nombre, '. -');
+
+    return ($nombre !== '' ? $nombre : 'reporte') . '.' . $extension;
+  }
+
   public function esExitoso($codigo = 200) {
     \Yii::$app->getResponse()->setStatusCode($codigo);
     return $this;

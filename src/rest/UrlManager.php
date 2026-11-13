@@ -13,6 +13,15 @@ class UrlManager extends \yii\web\UrlManager {
   // public $ruleConfig = ['class' => 'eDesarrollos\rest\UrlRule'];
 
   public $rules = [
+    'OPTIONS <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(blob)>' => '<module>/<controller>/options',
+    'OPTIONS <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>.<formato:(blob)>' => '<module>/<controller>/options',
+    'GET <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(blob)>' => '<module>/<controller>/<action>',
+    'GET <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>.<formato:(blob)>' => '<module>/<controller>',
+    'POST <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(blob)>' => '<module>/<controller>/<action>',
+    'POST <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>.<formato:(blob)>' => '<module>/<controller>/post',
+    'PUT <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(blob)>' => '<module>/<controller>/<action>',
+    'PUT <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>.<formato:(blob)>' => '<module>/<controller>/put',
+    'DELETE <module:(?!pdf$|excel$|word$)[\w-]+>/<controller:[\w-]+>/<action:[\w-]+>.<formato:(blob)>' => '<module>/<controller>/delete',
     'GET pdf/<controller:[\w-]+>/<action:[\w-]+>.<format:(?!pdf$)[\w]+>' => 'v1/default/error',
     'GET pdf/<controller:[\w-]+>.<format:(?!pdf$)[\w]+>' => 'v1/default/error',
     'GET excel/<controller:[\w-]+>/<action:[\w-]+>.<format:(?!xlsx$)[\w]+>' => 'v1/default/error',

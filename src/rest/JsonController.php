@@ -22,6 +22,7 @@ class JsonController extends Controller {
   const FORMATO_XLSX = 'xlsx';
   const FORMATO_PDF = 'pdf';
   const FORMATO_DOCX = 'docx';
+  const FORMATO_BLOB = 'blob';
 
   /** @var \yii\web\Application */
   public $app = null;
@@ -93,6 +94,7 @@ class JsonController extends Controller {
     $this->app = Yii::$app;
     $this->req = $this->app->getRequest();
     $this->res = $this->app->getResponse();
+    $this->res->on(Response::EVENT_BEFORE_SEND, [$this, 'validarFormatoRespuesta']);
     $headers = $this->res->getHeaders();
 
     $origin = $this->req->headers->get('Origin');
@@ -153,8 +155,57 @@ class JsonController extends Controller {
     } elseif ($formato === self::FORMATO_DOCX) {
       $this->res->format = self::FORMATO_DOCX;
       $this->res->formatters[self::FORMATO_DOCX] = 'eDesarrollos\formatters\DocxFormatter';
+    } elseif ($formato === self::FORMATO_BLOB) {
+      $this->res->format = Response::FORMAT_RAW;
     }
     return true;
+  }
+
+  public function validarFormatoRespuesta($event): void {
+    /** @var Response $respuesta */
+    $respuesta = $event->sender;
+
+    if ($respuesta->isClientError || $respuesta->isServerError || $this->esFormatoRespuestaCompatible($respuesta)) {
+      return;
+    }
+
+    $formatoActual = $respuesta->format;
+    $respuesta->setStatusCode(406, 'Formato de respuesta no corresponde');
+    $respuesta->format = Response::FORMAT_JSON;
+    $respuesta->data = [
+      'mensaje' => "El formato solicitado '.{$this->formato}' no corresponde al formato de respuesta '{$formatoActual}'.",
+      'errores' => [
+        'formato' => 'La respuesta debe coincidir con el formato solicitado en la URL.',
+      ],
+    ];
+    $respuesta->content = null;
+    $respuesta->stream = null;
+
+    $headers = $respuesta->getHeaders();
+    $headers->remove('Content-Disposition');
+    $headers->remove('Content-Length');
+    $headers->remove('Content-Range');
+    $headers->remove('Content-Type');
+  }
+
+  protected function esFormatoRespuestaCompatible(Response $respuesta): bool {
+    if ($this->formato === self::FORMATO_BLOB) {
+      return $respuesta->format === Response::FORMAT_RAW;
+    }
+
+    $formatos = [
+      self::FORMATO_JSON => Response::FORMAT_JSON,
+      self::FORMATO_XML => Response::FORMAT_XML,
+      self::FORMATO_HTML => self::FORMATO_HTML,
+      self::FORMATO_SQL => Response::FORMAT_RAW,
+      self::FORMATO_CSV => self::FORMATO_CSV,
+      self::FORMATO_XLSX => self::FORMATO_XLSX,
+      self::FORMATO_PDF => self::FORMATO_PDF,
+      self::FORMATO_DOCX => self::FORMATO_DOCX,
+    ];
+
+    return ($formatos[$this->formato] ?? null) === $respuesta->format
+      && !$respuesta->getHeaders()->has('Content-Disposition');
   }
 
   public function actionOptions() {
@@ -180,6 +231,14 @@ class JsonController extends Controller {
   }
 
   public function actionPost() {
+    return $this->guardarModelo($this->obtenerAccionActual('post'));
+  }
+
+  public function actionPut() {
+    return $this->actionPost();
+  }
+
+  protected function guardarModelo(string $accion) {
     $id = trim($this->req->getBodyParam("id", ""));
     $modelo = null;
 
@@ -194,6 +253,7 @@ class JsonController extends Controller {
       $modelo->modificado = new Expression('now()');
     }
 
+    $this->prepararModelo($modelo, $accion);
     $modelo->load($this->req->getBodyParams(), '');
     if (!$modelo->save()) {
       return (new Respuesta($modelo))
@@ -203,10 +263,6 @@ class JsonController extends Controller {
     $modelo->refresh();
     return (new Respuesta($modelo))
       ->mensaje("{$this->nombreSingular} guardado");
-  }
-
-  public function actionPut() {
-    return $this->actionPost();
   }
 
   public function actionDelete() {
@@ -240,6 +296,17 @@ class JsonController extends Controller {
     if ($id !== "") {
       $query->andWhere([$this->modeloID => $id]);
     }
+  }
+
+  /**
+   * Prepara un modelo antes de cargar los datos de una acción.
+   * Los controladores especializados pueden usarlo para aplicar escenarios.
+   */
+  protected function prepararModelo($modelo, string $accion): void {
+  }
+
+  protected function obtenerAccionActual(string $accionPredeterminada): string {
+    return $accionPredeterminada;
   }
 
   protected function debeExportarTodo(): bool {

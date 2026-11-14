@@ -18,8 +18,8 @@ class AuthController extends JsonController {
    * Permisos y escenario opcionales por acción.
    *
    * Una acción ausente en este arreglo sólo requiere autenticación. Cada
-   * elemento puede ser un permiso o un arreglo con las llaves permiso y
-   * escenario.
+   * elemento puede ser un permiso, una lista de permisos requeridos o un
+   * arreglo con las llaves permiso y escenario.
    *
    * @var array
    */
@@ -109,6 +109,11 @@ class AuthController extends JsonController {
 
     $configuracion = $this->permisosAccion[$accion];
     if (!is_array($configuracion)) {
+      return ['permiso' => $configuracion];
+    }
+
+    if (!array_key_exists('permiso', $configuracion)
+      && !array_key_exists('escenario', $configuracion)) {
       return ['permiso' => $configuracion];
     }
 

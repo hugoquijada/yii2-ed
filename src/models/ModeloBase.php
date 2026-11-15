@@ -46,6 +46,36 @@ class ModeloBase extends \yii\db\ActiveRecord {
     return $uuid;
   }
 
+  /**
+   * Resuelve la instancia que recibirá una fila importada.
+   *
+   * La implementación predeterminada busca por una llave primaria simple
+   * cuando la fila la contiene. Los modelos pueden sobrescribir este método
+   * para usar una llave natural, una combinación de campos o para devolver
+   * siempre una instancia nueva.
+   *
+   * @param array $fila Valores normalizados desde la hoja de cálculo.
+   * @return static Instancia existente o una nueva para insertar.
+   */
+  public static function resolverModeloImportacion(array $fila) {
+    $llaves = static::primaryKey();
+
+    if (count($llaves) === 1) {
+      $llave = $llaves[0];
+      $valor = trim((string)($fila[$llave] ?? ''));
+
+      if ($valor !== '') {
+        $modelo = static::findOne([$llave => $valor]);
+
+        if ($modelo !== null) {
+          return $modelo;
+        }
+      }
+    }
+
+    return new static();
+  }
+
   public function validarUnico($atributo, $parametros) {
     $query = static::find()
       ->andWhere([$atributo => $this->{$atributo}]);

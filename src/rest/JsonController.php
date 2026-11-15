@@ -3,6 +3,7 @@
 namespace eDesarrollos\rest;
 
 use eDesarrollos\data\Respuesta;
+use eDesarrollos\importacion\ImportadorSpreadsheet;
 use yii\db\ActiveQuery;
 use yii\db\Expression;
 use yii\web\Request;
@@ -11,6 +12,7 @@ use yii\rest\Controller;
 use yii\filters\ContentNegotiator;
 use Yii;
 use yii\web\ForbiddenHttpException;
+use yii\web\UploadedFile;
 
 class JsonController extends Controller {
 
@@ -59,6 +61,10 @@ class JsonController extends Controller {
 
   /** @var array */
   public $accionesPermitidas = ["index"];
+
+  /** Habilitar explícitamente en cada controlador que admita importaciones. */
+  public $importacionHabilitada = false;
+  public $duracionVistaPreviaImportacion = 900;
 
   public static function mostrarEnOpenapi(): bool {
     return true;
@@ -290,6 +296,61 @@ class JsonController extends Controller {
       ->mensaje("{$this->nombreSingular} eliminado");
   }
 
+  public function actionImportarVistaPrevia() {
+    $this->validarImportacionHabilitada();
+    $archivo = UploadedFile::getInstanceByName('archivo');
+    if ($archivo === null || strtolower($archivo->extension) !== 'xlsx') {
+      return (new Respuesta())->esError()->mensaje('Seleccione un archivo XLSX válido.');
+    }
+
+    try {
+      $importador = new ImportadorSpreadsheet();
+      $lectura = $importador->leer($archivo->tempName, $this->modelClass);
+      $revision = $importador->revisar($lectura['filas'], $this->modelClass, [$this, 'prepararModeloImportacion']);
+      $token = bin2hex(random_bytes(24));
+      $this->app->cache->set($this->llaveVistaPreviaImportacion($token), [
+        'usuario' => $this->usuarioImportacion(),
+        'filas' => $lectura['filas'],
+      ], $this->duracionVistaPreviaImportacion);
+
+      return (new Respuesta())->detalle([
+        'token' => $token,
+        'encabezados' => $lectura['encabezados'],
+        'vistaPrevia' => $revision,
+      ])->mensaje('Vista previa generada.');
+    } catch (\Throwable $error) {
+      return (new Respuesta())->esError()->mensaje($error->getMessage());
+    }
+  }
+
+  public function actionImportarAplicar() {
+    $this->validarImportacionHabilitada();
+    $token = trim((string)$this->req->getBodyParam('token', ''));
+    $vistaPrevia = $this->app->cache->get($this->llaveVistaPreviaImportacion($token));
+    if (!is_array($vistaPrevia) || ($vistaPrevia['usuario'] ?? null) !== $this->usuarioImportacion()) {
+      return (new Respuesta())->esError()->mensaje('La vista previa no existe, expiró o no pertenece al usuario actual.');
+    }
+
+    $transaccion = $this->app->db->beginTransaction();
+    try {
+      $importador = new ImportadorSpreadsheet();
+      $resultado = $importador->guardar($vistaPrevia['filas'], $this->modelClass, [$this, 'prepararModeloImportacion']);
+      if ($resultado['resumen']['errores'] > 0) {
+        $transaccion->rollBack();
+        return (new Respuesta())->esError()->detalle(['vistaPrevia' => $resultado])
+          ->mensaje('La importación cambió desde la vista previa; revísela antes de aplicar.');
+      }
+      $transaccion->commit();
+      $this->app->cache->delete($this->llaveVistaPreviaImportacion($token));
+
+      return (new Respuesta())->detalle(['vistaPrevia' => $resultado])
+        ->mensaje('Importación aplicada correctamente.');
+    } catch (\Throwable $error) {
+      $transaccion->rollBack();
+      return (new Respuesta())->esError()->mensaje($error->getMessage());
+    }
+  }
+
   public function buscador(ActiveQuery &$query, Request $request) {
     $id = $request->get($this->modeloID, "");
 
@@ -303,6 +364,36 @@ class JsonController extends Controller {
    * Los controladores especializados pueden usarlo para aplicar escenarios.
    */
   protected function prepararModelo($modelo, string $accion): void {
+  }
+
+  protected function prepararModeloImportacion($modelo, array $fila): void {
+    $this->prepararModelo($modelo, $modelo->getIsNewRecord() ? 'post' : 'put');
+    if ($modelo->getIsNewRecord()) {
+      $llaves = $modelo::primaryKey();
+      if (count($llaves) === 1 && empty($modelo->{$llaves[0]})) {
+        $modelo->uuid();
+      }
+      if ($modelo->hasProperty('creado')) {
+        $modelo->creado = new Expression('now()');
+      }
+    } elseif ($modelo->hasProperty('modificado')) {
+      $modelo->modificado = new Expression('now()');
+    }
+  }
+
+  protected function validarImportacionHabilitada(): void {
+    if (!$this->importacionHabilitada || $this->modelClass === null) {
+      throw new ForbiddenHttpException('La importación no está habilitada para este catálogo.');
+    }
+  }
+
+  protected function llaveVistaPreviaImportacion(string $token): string {
+    return 'importacion:' . str_replace('\\', '.', static::class) . ':' . $token;
+  }
+
+  protected function usuarioImportacion(): string {
+    $usuario = $this->app->getUser()->getIdentity();
+    return $usuario === null ? '' : (string)$usuario->getId();
   }
 
   protected function obtenerAccionActual(string $accionPredeterminada): string {

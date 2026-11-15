@@ -120,6 +120,17 @@ class ModeloBase extends \yii\db\ActiveRecord {
     return $modelo->fields();
   }
 
+  /**
+   * Columnas que se reconocen al importar un archivo previamente exportado.
+   *
+   * Por defecto coincide con las columnas del reporte, para que el mismo
+   * archivo XLSX pueda usarse como plantilla. Un modelo puede sobrescribirlo
+   * cuando una columna de reporte sea sólo informativa.
+   */
+  public static function columnasImportacion(): array {
+    return static::normalizarColumnasReporte();
+  }
+
   public function filaReporte(): array {
     $escenarioAnterior = $this->getScenario();
     $this->setScenario(static::SCENARIO_REPORTE);

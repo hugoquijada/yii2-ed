@@ -51,10 +51,11 @@ class Usuario extends ModeloBase implements IdentityInterface {
    */
   public function getAuthKey() {
     $key = Yii::$app->params['jwt.key'];
+    $duracion = max(1, intval(Yii::$app->params['jwt.duracion'] ?? 3600));
     $token = [
       "id" => $this->id,
       "pass" => $this->clave,
-      "exp" => time() + 3600
+      "exp" => time() + $duracion
     ];
 
     $jwt = JWT::encode($token, $key, 'HS256');

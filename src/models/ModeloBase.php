@@ -9,6 +9,7 @@ use hqsoft\reportkit\document\Row;
 use Ramsey\Uuid\Uuid;
 use Yii;
 use yii\helpers\ArrayHelper;
+use yii\db\Transaction;
 
 class ModeloBase extends \yii\db\ActiveRecord {
   const SCENARIO_REPORTE = 'reporte';
@@ -44,6 +45,42 @@ class ModeloBase extends \yii\db\ActiveRecord {
     } while ($modelo->exists());
     $this->{$pk} = $uuid;
     return $uuid;
+  }
+
+  public static function bitacoraHabilitada(): bool {
+    return true;
+  }
+
+  public function afterSave($insert, $changedAttributes) {
+    parent::afterSave($insert, $changedAttributes);
+
+    $this->programarBitacora(function () use ($insert, $changedAttributes) {
+      Yii::$app->bitacoraCambio->registrarGuardado($this, $insert, $changedAttributes);
+    });
+  }
+
+  public function afterDelete() {
+    parent::afterDelete();
+
+    $this->programarBitacora(function () {
+      Yii::$app->bitacoraCambio->registrarEliminacion($this);
+    });
+  }
+
+  private function programarBitacora(callable $registro): void {
+    if (Yii::$app === null || !Yii::$app->has('bitacoraCambio') || !static::bitacoraHabilitada()) {
+      return;
+    }
+
+    $transaccion = Yii::$app->db->getTransaction();
+    if ($transaccion !== null && $transaccion->isActive) {
+      $transaccion->on(Transaction::EVENT_COMMIT, function () use ($registro) {
+        $registro();
+      });
+      return;
+    }
+
+    $registro();
   }
 
   /**

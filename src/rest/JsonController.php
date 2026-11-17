@@ -106,6 +106,7 @@ class JsonController extends Controller {
     $origin = $this->req->headers->get('Origin');
     $headers->set('Access-Control-Allow-Methods', 'POST, GET, DELETE, PUT, OPTIONS');
     $headers->set('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-Requested-With, Content-Disposition, Content-Length');
+    $headers->set('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length, Content-Type');
     $headers->set('Access-Control-Request-Method', 'POST, GET, DELETE, PUT, OPTIONS');
     $headers->set('Access-Control-Allow-Credentials', 'true');
     if ($origin) {

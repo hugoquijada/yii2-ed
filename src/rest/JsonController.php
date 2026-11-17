@@ -307,7 +307,7 @@ class JsonController extends Controller {
     try {
       $importador = new ImportadorSpreadsheet();
       $lectura = $importador->leer($archivo->tempName, $this->modelClass);
-      $revision = $importador->revisar($lectura['filas'], $this->modelClass, [$this, 'prepararModeloImportacion']);
+      $revision = $importador->revisar($lectura['filas'], $this->modelClass, $this->preparadorImportacion());
       $token = bin2hex(random_bytes(24));
       $this->app->cache->set($this->llaveVistaPreviaImportacion($token), [
         'usuario' => $this->usuarioImportacion(),
@@ -335,7 +335,7 @@ class JsonController extends Controller {
     $transaccion = $this->app->db->beginTransaction();
     try {
       $importador = new ImportadorSpreadsheet();
-      $resultado = $importador->guardar($vistaPrevia['filas'], $this->modelClass, [$this, 'prepararModeloImportacion']);
+      $resultado = $importador->guardar($vistaPrevia['filas'], $this->modelClass, $this->preparadorImportacion());
       if ($resultado['resumen']['errores'] > 0) {
         $transaccion->rollBack();
         return (new Respuesta())->esError()->detalle(['vistaPrevia' => $resultado])
@@ -380,6 +380,12 @@ class JsonController extends Controller {
     } elseif ($modelo->hasProperty('modificado')) {
       $modelo->modificado = new Expression('now()');
     }
+  }
+
+  protected function preparadorImportacion(): \Closure {
+    return function ($modelo, array $fila): void {
+      $this->prepararModeloImportacion($modelo, $fila);
+    };
   }
 
   protected function validarImportacionHabilitada(): void {

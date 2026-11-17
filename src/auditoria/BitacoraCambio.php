@@ -7,6 +7,7 @@ use Yii;
 use yii\base\Component;
 use yii\db\ActiveRecord;
 use yii\db\Expression;
+use yii\db\JsonExpression;
 
 class BitacoraCambio extends Component {
 
@@ -67,10 +68,10 @@ class BitacoraCambio extends Component {
         'id' => Uuid::uuid4()->toString(),
         'idUsuario' => $usuario ? $usuario->getId() : null,
         'tabla' => $modelo::tableName(),
-        'idRegistro' => json_encode($llaves, JSON_UNESCAPED_UNICODE),
+        'idRegistro' => http_build_query($llaves, '', '&'),
         'accion' => $accion,
-        'antes' => json_encode($antes, JSON_UNESCAPED_UNICODE),
-        'despues' => json_encode($despues, JSON_UNESCAPED_UNICODE),
+        'antes' => new JsonExpression($antes),
+        'despues' => new JsonExpression($despues),
         'ruta' => $request ? $request->getUrl() : null,
         'fecha' => new Expression('now()'),
       ])->execute();

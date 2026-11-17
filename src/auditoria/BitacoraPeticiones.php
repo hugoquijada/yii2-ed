@@ -7,6 +7,7 @@ use Yii;
 use yii\base\Application;
 use yii\base\BootstrapInterface;
 use yii\db\Expression;
+use yii\db\JsonExpression;
 use yii\web\Response;
 
 class BitacoraPeticiones implements BootstrapInterface {
@@ -48,8 +49,8 @@ class BitacoraPeticiones implements BootstrapInterface {
         'codigo' => $respuesta->statusCode,
         'ip' => $request->userIP,
         'agente' => $request->userAgent,
-        'parametros' => json_encode($parametros, JSON_UNESCAPED_UNICODE),
-        'cuerpo' => json_encode($cuerpo, JSON_UNESCAPED_UNICODE),
+        'parametros' => new JsonExpression($parametros),
+        'cuerpo' => new JsonExpression($cuerpo),
         'error' => is_scalar($error) ? (string)$error : null,
         'duracionMs' => (int)round((microtime(true) - $inicio) * 1000),
         'fecha' => new Expression('now()'),

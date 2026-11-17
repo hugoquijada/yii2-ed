@@ -27,7 +27,8 @@ class AuthController extends JsonController {
 
   private $_accionActual;
 
-  public $accionesPermitidas = ["index", "post", "put", "delete"];
+  public $accionesPermitidas = ["index", "post", "put", "delete", "importar-vista-previa", "importar-aplicar"];
+  public $importacionHabilitada = true;
 
   public function behaviors() {
     $behavior = parent::behaviors();
@@ -104,6 +105,18 @@ class AuthController extends JsonController {
 
   private function configuracionPermisoAccion(string $accion): ?array {
     if (!array_key_exists($accion, $this->permisosAccion)) {
+      if (in_array($accion, ['importar-vista-previa', 'importar-aplicar'], true)) {
+        $permisos = [];
+        foreach (['post', 'put'] as $accionGuardar) {
+          $configuracion = $this->configuracionPermisoAccion($accionGuardar);
+          if ($configuracion !== null && isset($configuracion['permiso'])) {
+            $permisos = array_merge($permisos, (array)$configuracion['permiso']);
+          }
+        }
+        if (!empty($permisos)) {
+          return ['permiso' => array_values(array_unique($permisos))];
+        }
+      }
       return null;
     }
 

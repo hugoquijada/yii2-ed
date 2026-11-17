@@ -9,7 +9,7 @@ use hqsoft\reportkit\document\Row;
 use Ramsey\Uuid\Uuid;
 use Yii;
 use yii\helpers\ArrayHelper;
-use yii\db\Transaction;
+use yii\db\Connection;
 
 class ModeloBase extends \yii\db\ActiveRecord {
   const SCENARIO_REPORTE = 'reporte';
@@ -74,9 +74,20 @@ class ModeloBase extends \yii\db\ActiveRecord {
 
     $transaccion = Yii::$app->db->getTransaction();
     if ($transaccion !== null && $transaccion->isActive) {
-      $transaccion->on(Transaction::EVENT_COMMIT, function () use ($registro) {
+      $conexion = Yii::$app->db;
+      $alConfirmar = null;
+      $alRevertir = null;
+      $alConfirmar = function () use (&$alConfirmar, &$alRevertir, $conexion, $registro) {
+        $conexion->off(Connection::EVENT_COMMIT_TRANSACTION, $alConfirmar);
+        $conexion->off(Connection::EVENT_ROLLBACK_TRANSACTION, $alRevertir);
         $registro();
-      });
+      };
+      $alRevertir = function () use (&$alConfirmar, &$alRevertir, $conexion) {
+        $conexion->off(Connection::EVENT_COMMIT_TRANSACTION, $alConfirmar);
+        $conexion->off(Connection::EVENT_ROLLBACK_TRANSACTION, $alRevertir);
+      };
+      $conexion->on(Connection::EVENT_COMMIT_TRANSACTION, $alConfirmar);
+      $conexion->on(Connection::EVENT_ROLLBACK_TRANSACTION, $alRevertir);
       return;
     }
 

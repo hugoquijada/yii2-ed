@@ -51,6 +51,28 @@ class ModeloBase extends \yii\db\ActiveRecord {
     return true;
   }
 
+  public function beforeSave($insert) {
+    if (!parent::beforeSave($insert)) {
+      return false;
+    }
+
+    $idUsuario = $this->obtenerUsuarioAuditoria();
+    if ($idUsuario === null) {
+      return true;
+    }
+
+    if ($insert && $this->hasAttribute('idUsuarioCreador')
+      && empty($this->idUsuarioCreador)) {
+      $this->idUsuarioCreador = $idUsuario;
+    }
+
+    if (!$insert && $this->hasAttribute('idUsuarioModificador')) {
+      $this->idUsuarioModificador = $idUsuario;
+    }
+
+    return true;
+  }
+
   public function afterSave($insert, $changedAttributes) {
     parent::afterSave($insert, $changedAttributes);
 
@@ -92,6 +114,15 @@ class ModeloBase extends \yii\db\ActiveRecord {
     }
 
     $registro();
+  }
+
+  private function obtenerUsuarioAuditoria(): ?string {
+    if (!(Yii::$app instanceof \yii\web\Application) || !Yii::$app->has('user')) {
+      return null;
+    }
+
+    $idUsuario = Yii::$app->user->getId();
+    return $idUsuario === null ? null : (string)$idUsuario;
   }
 
   /**

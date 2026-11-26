@@ -139,6 +139,7 @@ class JsonController extends Controller {
         $this->queryInicial
           ->where(["{{{$tableName}}}.[[eliminado]]" => null]);
       }
+      $this->aplicarAlcanceUsuario($this->queryInicial);
     }
     $formato = $this->formato;
     if ($formato === self::FORMATO_JSON) {
@@ -250,7 +251,7 @@ class JsonController extends Controller {
     $modelo = null;
 
     if ($id !== "") {
-      $modelo = $this->modelClass::findOne($id);
+      $modelo = $this->buscarModeloAlcanzable($id);
     }
     if ($modelo === null) {
       $modelo = new $this->modelClass();
@@ -277,10 +278,7 @@ class JsonController extends Controller {
     $modelo = null;
 
     if ($id !== "") {
-      $modelo = $this->modelClass::findOne([
-        "id" => $id,
-        "eliminado" => null
-      ]);
+      $modelo = $this->buscarModeloAlcanzable($id);
     }
     if ($modelo === null) {
       return (new Respuesta())
@@ -358,6 +356,14 @@ class JsonController extends Controller {
     if ($id !== "") {
       $query->andWhere([$this->modeloID => $id]);
     }
+  }
+
+  protected function aplicarAlcanceUsuario(ActiveQuery $query): void {
+  }
+
+  protected function buscarModeloAlcanzable(string $id) {
+    $query = clone $this->queryInicial;
+    return $query->andWhere([$this->modeloID => $id])->one();
   }
 
   /**

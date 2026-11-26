@@ -29,6 +29,7 @@ class AuthController extends JsonController {
 
   public $accionesPermitidas = ["index", "post", "put", "delete", "importar-vista-previa", "importar-aplicar"];
   public $importacionHabilitada = true;
+  public $limitarPorUsuario = false;
 
   public function behaviors() {
     $behavior = parent::behaviors();
@@ -83,6 +84,23 @@ class AuthController extends JsonController {
     }
 
     return true;
+  }
+
+  protected function aplicarAlcanceUsuario(\yii\db\ActiveQuery $query): void {
+    if (!$this->limitarPorUsuario || $this->usuario === null || $this->modelClass === null) {
+      return;
+    }
+
+    $modelo = new $this->modelClass();
+    if (!$modelo->hasAttribute('idUsuarioCreador') || !$modelo->hasAttribute('idUsuarioModificador')) {
+      return;
+    }
+
+    $query->andWhere([
+      'OR',
+      ['idUsuarioCreador' => $this->usuario->getId()],
+      ['idUsuarioModificador' => $this->usuario->getId()],
+    ]);
   }
 
   protected function prepararModelo($modelo, string $accion): void {
